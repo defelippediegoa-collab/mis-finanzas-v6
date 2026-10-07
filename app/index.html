@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15171c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Finanzas">
+<title>Mis Finanzas</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+  <div class="top">
+    <div class="month" id="hdrMonth"><button id="prevM">‹</button><span class="m" id="curM">jun 2026</span><button id="nextM">›</button></div>
+    <div class="back hidden" id="hdrBack"><button id="backBtn">‹</button><span id="backTitle"></span></div>
+    <button class="topbtn" id="menuBtn">⋮</button>
+  </div>
+  <div class="menu" id="menu">
+    <button id="remindersBtn">Recordatorios</button>
+    <button id="pasteRemBtn">Pegar recordatorios de Claude</button>
+    <button id="newAccBtn">Nueva cuenta</button>
+    <button id="catsBtn">Categorías y subcategorías</button>
+    <button id="rateBtn">Cotización dólar</button>
+    <button id="syncBtn">Sincronizar (Google Sheets)</button>
+    <div class="div"></div>
+    <button id="impBtn">Importar datos (.json)</button>
+    <button id="expBtn">Exportar copia (.json)</button>
+    <button id="csvBtn">Exportar a planilla (.csv)</button>
+    <div class="div"></div>
+    <button id="demoBtn">Cargar ejemplo de prueba</button>
+    <button id="wipeBtn" style="color:var(--expense)">Borrar todo</button>
+    <div style="text-align:center;color:var(--muted);font-size:11px;padding:8px 0 2px" id="verLbl">Versión v6</div>
+  </div>
+  <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
+  <div id="updBar" class="updbar hidden">Hay una versión nueva · <b>Tocá para actualizar</b></div>
+
+  <div class="view" id="view-trans">
+    <div class="greet"><div class="gh1">Hola, Diego 👋</div><div class="gh2" id="greetDate"></div></div>
+    <div class="acchero">
+      <div class="balmode"><button class="bm" id="bmMes">Balance del mes</button><button class="bm" id="bmCaja">Balance de caja</button></div>
+      <div class="big" id="s-bal">0.00</div>
+      <div class="acccells">
+        <div class="acccell"><div class="acl">Ingresos</div><div class="acv pos" id="s-inc">0.00</div></div>
+        <div class="acccell"><div class="acl" id="s-exp-lbl">Gastos</div><div class="acv neg" id="s-exp">0.00</div></div>
+        <div class="acccell" id="s-rem-cell"><div class="acl" id="s-rem-lbl">Recordatorios</div><div class="acv" id="s-rem" style="color:var(--warn)">0.00</div></div>
+      </div>
+      <div class="daily hidden" id="s-daily"></div>
+    </div>
+    <div id="finmes"></div>
+    <div class="searchbar"><span class="si">🔎</span><input id="txSearch" placeholder="Buscar nota, categoría, cuenta, monto…" autocomplete="off"><button id="txSearchClear" class="hidden">✕</button></div>
+    <div class="txfilter"><button class="tf" id="tfCard">💳 Tarjetas</button><button class="tf" id="tfCash">💵 Contado</button><button class="tf on" id="tfAll">Todas</button></div>
+    <div id="diario"></div>
+  </div>
+
+  <div class="view hidden" id="view-stats">
+    <div class="tabs">
+      <div class="t on" id="tab-inc">Ingresos<span class="am pos" id="st-inc">0.00</span></div>
+      <div class="t" id="tab-exp">Gastos<span class="am neg" id="st-exp">0.00</span></div>
+    </div>
+    <div id="st-flow"></div>
+    <div class="chartwrap" id="chart"></div>
+    <div class="legend" id="legend"></div>
+    <div id="st-tags"></div>
+  </div>
+
+  <div class="view hidden" id="view-panel">
+    <div class="txfilter" style="padding:12px 16px 2px"><button class="tf" id="pmCaja">Panel de caja</button><button class="tf" id="pmMes">Panel del mes</button></div>
+    <div class="txfilter" style="padding:6px 16px 0"><button class="tf" id="psCards">🔲 Vista tarjetas</button><button class="tf" id="psDet">📄 Vista detalle</button></div>
+    <div id="panelBody"></div>
+  </div>
+
+  <div class="view hidden" id="view-cards">
+    <div id="cardsBody"></div>
+  </div>
+
+  <div class="view hidden" id="view-acc">
+    <div class="acchero">
+      <div class="ahlbl">Balance</div>
+      <div class="big" id="a-bal">0.00</div>
+      <div class="acccells">
+        <div class="acccell"><div class="acl">Capital</div><div class="acv pos" id="a-cap">0.00</div></div>
+        <div class="acccell tapcell" id="a-debt-cell"><div class="acl">A deber ›</div><div class="acv neg" id="a-debt">0.00</div></div>
+      </div>
+    </div>
+    <div class="hidsum hidden" id="a-hidden-wrap"><span>Cuentas ocultas (aparte)</span><span id="a-hidden">0.00</span></div>
+    <div id="accounts"></div>
+  </div>
+
+  <div class="view hidden" id="view-proj">
+    <div class="pj-hero"><div class="lbl">Capital hoy</div><div class="big" id="pj-now">0.00</div><div class="sub">Todas tus cuentas, sin tarjetas ni cuentas ocultas</div></div>
+    <div class="pj-sec pjtoggle" id="remToggle"><span class="rtoglbl"><span class="caret" id="remCaret">▸</span> Recordatorios <span class="cnt" id="remCount"></span></span><button id="addRem">+ Recordatorio</button></div>
+    <div id="reminders" class="hidden"></div>
+    <div class="pj-sec"><span>Proyección próximos meses</span></div>
+    <div id="pj-chart"></div>
+    <div id="pj-months"></div>
+  </div>
+
+  <!-- detail overlay (account or category) -->
+  <div class="view hidden" id="view-detail"><div id="detailBody"></div></div>
+
+  <div class="nav">
+    <div class="n" data-v="panel"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>Panel</div>
+    <div class="n on" data-v="trans"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>Trans.</div>
+    <div class="n" data-v="stats"><svg viewBox="0 0 24 24"><path d="M5 20V9M12 20V4M19 20v-7"/></svg>Estad.</div>
+    <div class="n" data-v="cards"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>Tarjetas</div>
+    <div class="n" data-v="acc"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>Cuentas</div>
+    <div class="n" data-v="proj"><svg viewBox="0 0 24 24"><path d="M4 18 9 12l4 4 7-9"/><path d="M14 7h6v6"/></svg>Proyec.</div>
+  </div>
+  <button class="fab" id="fab">+</button>
+</div>
+
+<!-- TRANSACTION SHEET -->
+<div class="scrim" id="scrim"><div class="sheet">
+  <h3><span id="sheetTitle">Nuevo movimiento</span><button class="x" id="closeSheet">×</button></h3>
+  <div class="seg" id="typeSeg"><button class="on" data-t="expense">Gasto</button><button data-t="income">Ingreso</button><button data-t="transfer">Transferencia</button></div>
+  <div class="fld"><label id="amtLbl">Importe</label><input type="number" class="big" id="f-amount" inputmode="decimal" placeholder="0"><div class="hint hidden" id="amtHint"></div></div>
+  <div class="fld" id="f-acc-wrap"><label id="f-acc-lbl">Cuenta</label><select id="f-account"></select></div>
+  <div class="fld hidden" id="f-to-wrap"><label>Hacia</label><select id="f-to"></select></div>
+  <div class="fld" id="f-cat-wrap"><label>Categoría</label><select id="f-category"></select></div>
+  <div class="fld" id="f-sub-wrap"><label>Subcategoría</label><select id="f-sub"></select></div>
+  <div class="fld hidden" id="f-note-wrap"><label>Nota</label><input id="f-note" list="note-suggestions" autocomplete="off" placeholder="Empezá a escribir; te sugiere notas ya usadas"><datalist id="note-suggestions"></datalist></div>
+  <div class="fld hidden" id="f-tags-wrap"><label>Etiquetas (opcional, separadas por coma)</label><input id="f-tags" list="tag-suggestions" autocomplete="off" placeholder="auto, vacaciones…"><datalist id="tag-suggestions"></datalist></div>
+  <div class="extra hidden" id="fxExtra"><div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Tipo de cambio</label><input type="number" id="f-rate" inputmode="decimal" placeholder="0"></div><div><label style="font-size:12px;color:var(--muted)" id="fxToLbl">Recibe</label><input id="f-amountto" disabled></div></div><div class="hint" style="padding:0 18px" id="fxHint"></div></div>
+  <div class="fld"><label>Fecha</label><input type="date" id="f-date"></div>
+  <div id="payModeWrap">
+    <div class="fld"><label>Forma de pago</label></div>
+    <div class="seg" id="paySeg" style="margin-top:0"><button class="on" data-p="once">Único</button><button data-p="inst">Cuotas</button><button data-p="sub">Suscripción</button></div>
+    <div class="extra hidden" id="onceExtra"><div class="fld" style="padding:6px 18px"><label>Mes de pago</label><input type="month" id="f-paymonth"><div class="hint">El gasto queda en el mes de la fecha; el pago se liquida en este mes.</div></div></div>
+    <div class="extra hidden" id="instExtra"><div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Mes 1ª cuota</label><input type="month" id="f-due"></div><div><label style="font-size:12px;color:var(--muted)">N° de cuotas</label><input type="number" id="f-inst" value="3" min="2" max="60"></div></div></div>
+    <div class="extra hidden" id="subExtra"><div class="fld" style="padding:6px 18px"><label>Se repite desde</label><input type="month" id="f-subfrom"></div></div>
+  </div>
+  <button class="save" id="saveTx">Guardar</button>
+  <button class="del hidden" id="dupTx" style="color:var(--income);border-color:var(--income)">Duplicar (mes siguiente)</button>
+  <button class="del hidden" id="delTx">Eliminar movimiento</button>
+</div></div>
+
+<!-- ACCOUNT SHEET -->
+<div class="scrim" id="accScrim"><div class="sheet">
+  <h3><span id="accTitle">Nueva cuenta</span><button class="x" id="closeAcc">×</button></h3>
+  <div class="fld"><label>Tipo</label><select id="ac-type">
+    <option>Efectivo</option><option>Cuentas</option><option>Tarjetas de crédito</option><option>Tarjetas de débito</option><option>Ahorros</option><option>Tarjeta prepago</option><option>Inversiones</option><option>Préstamo</option><option>Otros</option>
+  </select></div>
+  <div class="fld"><label>Nombre</label><input id="ac-name" placeholder="Ej: Santander visa"></div>
+  <div class="fld" id="ac-initial-wrap"><label>Dinero inicial</label><input type="number" class="big" id="ac-initial" placeholder="0"></div>
+  <div class="fld"><label>Moneda</label><div class="curpick" id="ac-cur"></div></div>
+  <div class="extra hidden" id="ac-cardextra"><div class="hint" style="padding:8px 18px">La deuda de la tarjeta se calcula sola: los consumos van a "vencido / a pagar" o "próximo vencimiento" según su mes de pago, y se netean con las transferencias que hacés para pagarla. No hace falta cargar saldos a mano.</div></div>
+  <div class="fld"><label>Descripción (opcional)</label><input id="ac-desc" placeholder=""></div>
+  <div class="swrow"><div><div class="tl">Incluir en mi total</div><div class="ts">Apagalo para cuentas de ahorro que no querés sumar a tu capital.</div></div><div class="sw on" id="ac-include"></div></div>
+  <button class="save" id="saveAcc">Guardar</button>
+  <button class="del hidden" id="delAcc">Eliminar cuenta</button>
+</div></div>
+
+<!-- PASTE REMINDERS (from Claude) -->
+<div class="scrim" id="pasteScrim"><div class="sheet">
+  <h3><span>Pegar recordatorios de Claude</span><button class="x" id="closePaste">×</button></h3>
+  <div class="hint" style="padding:0 18px 8px">Pedile a Claude tus recordatorios, copiá el código que te da y pegalo acá. Se agregan sin borrar nada de lo que ya tenés.</div>
+  <div class="fld"><textarea id="paste-text" rows="7" style="width:100%;box-sizing:border-box;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:11px;padding:12px;font-family:monospace;font-size:13px" placeholder='[ {"type":"expense","name":"Edenor","amount":50000,"freq":"monthly","from":"2026-07","category":"Gastos Fijos","sub":"Luz"} ]'></textarea></div>
+  <button class="save" id="addPaste">Agregar recordatorios</button>
+</div></div>
+
+<!-- REMINDER SHEET -->
+<div class="scrim" id="remScrim"><div class="sheet">
+  <h3><span id="remTitle">Nuevo recordatorio</span><button class="x" id="closeRem">×</button></h3>
+  <div class="seg" id="remTypeSeg"><button class="on" data-t="expense">Gasto</button><button data-t="income">Ingreso</button></div>
+  <div class="fld"><label>Nombre</label><input id="r-name" placeholder="Ej: Gas, Sueldo, Netflix"></div>
+  <div class="fld"><label>Importe</label><input type="number" class="big" id="r-amount" inputmode="decimal" placeholder="0"></div>
+  <div class="fld"><label>Frecuencia</label><select id="r-freq"><option value="monthly">Cada mes</option><option value="once">Una sola vez</option></select></div>
+  <div class="row2" style="padding:0"><div class="fld"><label>Desde (mes)</label><input type="month" id="r-from"></div><div class="fld"><label>Hasta (opcional)</label><input type="month" id="r-until"></div></div>
+  <div class="fld"><label>Cuenta asociada (opcional)</label><select id="r-account"></select></div>
+  <div class="fld"><label>Categoría (opcional)</label><select id="r-category"></select></div>
+  <div class="fld"><label>Subcategoría (opcional)</label><select id="r-sub"></select></div>
+  <div class="fld"><label>Etiquetas (opcional, separadas por coma)</label><input id="r-tags" list="tag-suggestions" autocomplete="off" placeholder="auto, casa…"></div>
+  <div class="fld"><label>Cambios de monto (opcional)</label><div id="r-changes"></div><button id="addChange" type="button" class="editbtn" style="margin-top:6px;width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:9px;cursor:pointer">+ Cambio de monto desde un mes</button><div class="hint" style="padding:6px 0 0">Ej: el importe sube en septiembre. Se aplica a ese mes y a todos los siguientes.</div></div>
+  <button class="save" id="saveRem">Guardar recordatorio</button>
+  <button class="del hidden" id="delRem">Eliminar recordatorio</button>
+</div></div>
+
+<!-- CATEGORY MANAGER -->
+<div class="scrim" id="catScrim"><div class="sheet">
+  <h3><span>Categorías y subcategorías</span><button class="x" id="closeCat">×</button></h3>
+  <div class="mgr-tabs" id="mgrTabs"><button class="on" data-k="expense">Gastos</button><button data-k="income">Ingresos</button></div>
+  <div class="addline"><input id="newCat" placeholder="Nueva categoría"><button id="addCat">+</button></div>
+  <div id="catList"></div>
+  <div class="pj-sec" style="padding:14px 18px 6px"><span>Subcategorías de</span></div>
+  <div class="addline"><select id="subCatSel"></select></div>
+  <div class="addline"><input id="newSub" placeholder="Nueva subcategoría"><button id="addSub">+</button></div>
+  <div id="subList" style="padding-bottom:24px"></div>
+</div></div>
+
+<!-- SYNC SHEET -->
+<div class="scrim" id="syncScrim"><div class="sheet">
+  <h3><span>Sincronizar con Google Sheets</span><button class="x" id="closeSync">×</button></h3>
+  <div class="fld"><label>URL de tu app web (Apps Script v6)</label><input id="sync-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
+  <div class="fld"><label>Token (API_TOKEN del Apps Script)</label><input id="sync-token" placeholder="el mismo que pusiste en Script Properties"></div>
+  <div class="ratebox"><div class="rl" id="sync-status">Estado: sin configurar</div><div class="rl" id="ai-status"></div></div>
+  <button class="save" id="syncPush">Subir mis datos a la nube ▲</button>
+  <button class="editbtn" id="syncPull" style="margin:0 18px 8px;width:calc(100% - 36px)">Bajar datos de la nube ▼</button>
+  <div class="swrow"><div><div class="tl">Sincronizar automáticamente</div><div class="ts">Sube tus cambios a la nube al instante y baja los últimos datos al abrir o volver a la app.</div></div><div class="sw" id="sync-auto"></div></div>
+  <button class="editbtn" id="syncSaveUrl" style="margin:14px 18px 22px;width:calc(100% - 36px)">Guardar configuración</button>
+</div></div>
+
+<!-- RATE SHEET -->
+<div class="scrim" id="rateScrim"><div class="sheet">
+  <h3><span>Cotización dólar</span><button class="x" id="closeRate">×</button></h3>
+  <div class="ratebox"><div class="rl">Tipo de cambio actual (ARS por US$)</div><div class="rv" id="rateNow">—</div><div class="rl" id="rateMeta" style="margin-top:4px"></div></div>
+  <div class="fld"><label>Cargar manualmente</label><input type="number" class="big" id="rateInput" inputmode="decimal" placeholder="0"></div>
+  <button class="save" id="rateSave">Guardar tipo de cambio</button>
+  <button class="editbtn" id="rateFetch" style="margin:0 18px 22px;width:calc(100% - 36px)">Actualizar con Banco Nación (online)</button>
+</div></div>
+
+<div class="scrim" id="debtScrim"><div class="sheet">
+  <h3><span>A deber · mes en curso</span><button class="x" id="closeDebt">×</button></h3>
+  <div id="debtBody"></div>
+</div></div>
+
+<div class="scrim" id="cardDetScrim"><div class="sheet">
+  <h3><span id="cardDetTitle">Detalle</span><button class="x" id="closeCardDet">×</button></h3>
+  <div id="cardDetBody"></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/store.js"></script>
+<script src="js/helpers.js"></script>
+<script src="js/views/trans.js"></script>
+<script src="js/views/stats.js"></script>
+<script src="js/model.js"></script>
+<script src="js/views/accounts.js"></script>
+<script src="js/views/proj.js"></script>
+<script src="js/views/detail.js"></script>
+<script src="js/views/panel.js"></script>
+<script src="js/views/cards.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/io.js"></script>
+<script src="js/views/txform.js"></script>
+<script src="js/views/accform.js"></script>
+<script src="js/views/remform.js"></script>
+<script src="js/views/cats.js"></script>
+<script src="js/misc.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
