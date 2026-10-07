@@ -24,6 +24,7 @@
   <div class="menu" id="menu">
     <button id="ticketBtn">🧾 Escanear ticket</button>
     <button id="inboxBtn">📥 Pendientes de WhatsApp</button>
+    <button id="bulkBtn">☑️ Edición masiva</button>
     <button id="remindersBtn">Recordatorios</button>
     <button id="pasteRemBtn">Pegar recordatorios de Claude</button>
     <button id="newAccBtn">Nueva cuenta</button>
@@ -188,6 +189,29 @@
   <div style="height:14px"></div>
 </div></div>
 
+<!-- BULK SHEET -->
+<div class="scrim" id="bulkScrim"><div class="sheet bulk">
+  <h3><span>☑️ Edición masiva</span><button class="x" id="closeBulk">×</button></h3>
+  <div class="bkfilters">
+    <div class="row2"><div><label>Desde (mes)</label><input type="month" id="bk-from"></div><div><label>Hasta (mes)</label><input type="month" id="bk-to"></div></div>
+    <div class="row2"><div><label>Tipo</label><select id="bk-type"></select></div><div><label>Cuenta</label><select id="bk-account"></select></div></div>
+    <div class="row2"><div><label>Categoría</label><select id="bk-cat"></select></div><div><label>Subcategoría</label><select id="bk-sub"></select></div></div>
+    <div class="row2"><div><label>Buscar (nota, comercio…)</label><input id="bk-q" placeholder="coto, nafta…"></div><div><label>Etiqueta</label><input id="bk-tag" placeholder="auto"></div></div>
+    <div class="row2"><div><label>Origen</label><select id="bk-source"></select></div><div style="display:flex;align-items:flex-end;gap:6px"><button class="bkbtn" id="bk-all">Todos</button><button class="bkbtn" id="bk-none">Ninguno</button><button class="bkbtn" id="bk-invert">Invertir</button></div></div>
+    <div class="bkcount"><span id="bk-count"></span><span id="bk-selcount"></span></div>
+  </div>
+  <div id="bk-list"></div>
+  <div id="bk-actions" class="bkactions hidden">
+    <div class="fld" style="padding:8px 18px 2px"><label>Acción sobre los seleccionados</label><select id="bk-action"></select></div>
+    <div class="row2" style="padding:4px 18px"><div id="bk-a-cat"><label>Categoría nueva</label><select id="bk-new-cat"></select></div><div id="bk-a-sub"><label>Subcategoría</label><select id="bk-new-sub"></select><div class="hint" id="bk-sub-hint"></div></div></div>
+    <div class="fld hidden" id="bk-a-acc" style="padding:4px 18px"><label>Cuenta nueva</label><select id="bk-new-acc"></select></div>
+    <div class="fld hidden" id="bk-a-tag" style="padding:4px 18px"><label>Etiqueta</label><input id="bk-new-tag" list="bk-tag-sugg" placeholder="auto"><datalist id="bk-tag-sugg"></datalist></div>
+    <div class="hint bkprev" id="bk-preview"></div>
+    <label class="bkremember hidden" id="bk-remember-wrap"><input type="checkbox" id="bk-remember"> <span>Recordar: si la nota o comercio contiene</span> <input id="bk-remember-txt" placeholder="coto"> <span>→ usar esta categoría en tickets y WhatsApp</span></label>
+    <div class="row2" style="padding:6px 18px 16px"><button class="save" id="bk-apply" style="margin:0;width:100%">Aplicar</button><button class="editbtn hidden" id="bk-undo" style="margin:0;width:100%">↶ Deshacer el último cambio</button></div>
+  </div>
+</div></div>
+
 <!-- ACCOUNT SHEET -->
 <div class="scrim" id="accScrim"><div class="sheet">
   <h3><span id="accTitle">Nueva cuenta</span><button class="x" id="closeAcc">×</button></h3>
@@ -299,6 +323,7 @@
 <script src="js/views/items.js"></script>
 <script src="js/views/inbox.js"></script>
 <script src="js/share.js"></script>
+<script src="js/views/bulk.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

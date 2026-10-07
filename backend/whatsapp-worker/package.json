@@ -1,0 +1,15 @@
+{
+  "name": "finbot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "test:send": "node test/send.mjs",
+    "test": "node test/flow.test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

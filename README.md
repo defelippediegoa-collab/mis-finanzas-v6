@@ -16,8 +16,8 @@ app/                      PWA (se publica tal cual en GitHub Pages)
   sw.js                   cache versionado (subir VERSION en cada deploy)
   manifest.webmanifest
 backend/apps-script/      Code.gs, Sheets.gs, Inbox.gs, AI.gs, Prompts.gs — ver su README
-backend/whatsapp-worker/  bot de WhatsApp (Cloudflare Worker) — fase 5
-docs/                     migración, arquitectura, pruebas
+backend/whatsapp-worker/  bot de WhatsApp (Cloudflare Worker) — ver su README; `npm test` corre la conversación offline
+docs/                     migration.md, architecture.md, setup-meta.md, testing.md
 ```
 
 ## Desarrollo local
@@ -25,6 +25,14 @@ docs/                     migración, arquitectura, pruebas
 ```bash
 npx -y serve app -l 8080
 ```
+
+Qué hay en la v6, además de todo lo de la v55:
+
+- **🧾 Escanear ticket** (botón flotante o menú): foto, archivo o carga manual → ítems editables → cuenta, mes de pago o cuotas. Estadísticas → "Ítems del mes".
+- **📥 Pendientes de WhatsApp**: lo que cargás desde el bot queda en una bandeja hasta que lo confirmás.
+- **Compartir a la app** desde WhatsApp o la galería (PWA instalada en Android).
+- **☑️ Edición masiva**: filtrar, seleccionar varios y cambiar categoría, subcategoría, cuenta o etiquetas a todos; deshacer; "recordar" reglas por comercio.
+- **IA opcional** (Claude vía Apps Script): tickets y texto libre. Sin clave, todo funciona a mano.
 
 Para probar en el celular hace falta HTTPS (service worker, compartir a la app): usar GitHub Pages directamente o `cloudflared tunnel --url http://localhost:8080`.
 

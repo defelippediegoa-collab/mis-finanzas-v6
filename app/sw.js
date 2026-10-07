@@ -1,9 +1,9 @@
 // Service worker de Mis Finanzas v6. Subí VERSION en cada deploy: el cache viejo se borra y la app avisa "versión nueva".
-const VERSION='6.2.0';
+const VERSION='6.3.0';
 const CACHE='finanzas-'+VERSION;
 const ASSETS=['./','./index.html','./manifest.webmanifest','./css/app.css',
   './icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png',
-  './js/store.js','./js/helpers.js','./js/views/trans.js','./js/views/stats.js','./js/model.js','./js/views/accounts.js','./js/views/proj.js','./js/views/detail.js','./js/views/panel.js','./js/views/cards.js','./js/nav.js','./js/io.js','./js/views/txform.js','./js/views/accform.js','./js/views/remform.js','./js/views/cats.js','./js/misc.js','./js/sync.js','./js/image.js','./js/ai.js','./js/rules.js','./js/views/ticket.js','./js/views/items.js','./js/views/inbox.js','./js/share.js','./js/main.js'];
+  './js/store.js','./js/helpers.js','./js/views/trans.js','./js/views/stats.js','./js/model.js','./js/views/accounts.js','./js/views/proj.js','./js/views/detail.js','./js/views/panel.js','./js/views/cards.js','./js/nav.js','./js/io.js','./js/views/txform.js','./js/views/accform.js','./js/views/remform.js','./js/views/cats.js','./js/misc.js','./js/sync.js','./js/image.js','./js/ai.js','./js/rules.js','./js/views/ticket.js','./js/views/items.js','./js/views/inbox.js','./js/share.js','./js/views/bulk.js','./js/main.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE&&x!=='share-inbox').map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});
 self.addEventListener('message',e=>{if(e.data==='SKIP_WAITING')self.skipWaiting();});

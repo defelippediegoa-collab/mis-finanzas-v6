@@ -1,0 +1,5 @@
+# Copiá este archivo a .dev.vars (no se sube a git) para `npx wrangler dev`
+META_APP_SECRET="clave-secreta-de-la-app"
+META_TOKEN="EAAG...token-permanente"
+META_VERIFY_TOKEN="una-palabra-inventada"
+GAS_TOKEN="el-API_TOKEN-del-apps-script"

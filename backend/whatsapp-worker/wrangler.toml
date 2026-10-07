@@ -1,0 +1,20 @@
+# Bot de WhatsApp de Mis Finanzas v6 — Cloudflare Worker (plan gratuito alcanza)
+name = "finbot"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+# Variables NO secretas. Las secretas van con `npx wrangler secret put NOMBRE`:
+#   META_APP_SECRET   (App → Configuración → Básica → Clave secreta de la app)
+#   META_TOKEN        (token permanente del System User con whatsapp_business_messaging)
+#   META_VERIFY_TOKEN (una palabra inventada; la misma que pongas en el webhook de Meta)
+#   GAS_TOKEN         (el API_TOKEN del Apps Script)
+[vars]
+PHONE_NUMBER_ID = "REEMPLAZAR"          # WhatsApp → API Setup → "Phone number ID" del número de prueba
+GAS_URL = "https://script.google.com/macros/s/REEMPLAZAR/exec"
+ALLOWED_NUMBERS = "5491100000000"       # tu número en formato internacional sin +, separados por coma si son varios
+GRAPH_VERSION = "v21.0"
+AI_MODE = "gas"                         # "gas" = la IA se llama vía Apps Script; "off" = sin IA
+
+[[kv_namespaces]]
+binding = "STATE"
+id = "REEMPLAZAR_CON_EL_ID_DE_KV"       # npx wrangler kv namespace create STATE

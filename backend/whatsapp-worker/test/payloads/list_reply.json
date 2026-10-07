@@ -1,0 +1,43 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "WABA_ID",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "15550000000",
+              "phone_number_id": "PHONE_NUMBER_ID"
+            },
+            "contacts": [
+              {
+                "profile": {
+                  "name": "Diego"
+                },
+                "wa_id": "5491100000000"
+              }
+            ],
+            "messages": [
+              {
+                "from": "5491100000000",
+                "id": "wamid.LST1",
+                "timestamp": "1790000000",
+                "type": "interactive",
+                "interactive": {
+                  "type": "list_reply",
+                  "list_reply": {
+                    "id": "acc:0",
+                    "title": "Efectivo Casa"
+                  }
+                }
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}
