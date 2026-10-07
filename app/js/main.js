@@ -4,6 +4,7 @@ Store.save(DB);setView('trans');
 $('#greetDate').textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
 $('#verLbl').textContent='Versión v'+APP_VERSION;
 if(CFG.syncUrl&&CFG.syncAuto)cloudPull(true);
+pollInbox(true);handleShare();
 // Si la app quedó abierta y cambió el día, recargamos para que "hoy" y los meses actuales no queden congelados.
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&localDate()!==BOOT_DATE)location.reload();});
 // Service worker con aviso de versión nueva (el usuario decide cuándo actualizar).

@@ -243,6 +243,12 @@
   .tkpreview img{display:block;max-height:140px;margin:10px auto 0;border-radius:10px;border:1px solid var(--line)}
   .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;margin:0 auto;animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
+  .inboxbar{margin:0 16px 10px;padding:10px 14px;background:#1f2a3a;border:1px solid #2f4a6a;border-radius:12px;font-size:13px;cursor:pointer}
+  .ibrow{margin:10px 18px 0;padding:12px 14px;background:#171a2b;border:1px solid var(--line);border-radius:12px}
+  .ibrow .ibtop{display:flex;justify-content:space-between;align-items:center;font-size:14px}.ibrow .ibtop small{color:var(--muted2);font-size:11px}
+  .ibrow .ibsub{font-size:12px;color:var(--muted);margin-top:4px}
+  .ibrow .ibbtns{display:flex;gap:8px;margin-top:10px}.ibrow .ibbtns button{flex:1;border-radius:9px;padding:9px;border:1px solid var(--line);background:#23272f;color:var(--txt);cursor:pointer;font-size:13px}
+  .ibrow .ibbtns .ib-ok{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
   .updbar{position:fixed;top:0;left:0;right:0;z-index:40;background:var(--accent,#7c6cf0);color:#fff;text-align:center;font-size:13px;padding:10px 14px;cursor:pointer}
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#2c313c;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;z-index:30;opacity:0;transition:.2s;pointer-events:none;border:1px solid var(--line)}.toast.on{opacity:1}
   .mgr-tabs{display:flex;margin:12px 18px 4px;gap:8px}

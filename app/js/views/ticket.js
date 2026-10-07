@@ -11,6 +11,11 @@ function openTicket(preset){ // preset opcional: {file} (desde Compartir) | {edi
   aiInfo().then(i=>{$('#tkAiHint').textContent=i.ai?('IA activa · '+i.model):('Sin IA: '+i.reason+' Podés cargar los ítems a mano.');});
   if(preset&&preset.editId)return tkEdit(preset.editId);
   if(preset&&preset.file){TK.source=preset.source||'share';return tkProcess(preset.file);}
+  if(preset&&preset.draft){const d=preset.draft;TK.source=preset.source||'wa';TK.inboxId=INBOX_EDIT;
+    TK.items=(d.items||[]).map(i=>({desc:i.desc||'',qty:i.qty||1,unit:i.unit||'u',unitPrice:i.unitPrice!=null?i.unitPrice:(i.unit_price!=null?i.unit_price:null),amount:typeof i.amount==='number'?i.amount:0,discount:!!(i.discount||i.is_discount)}));
+    TK.merchant=d.merchant||'';TK.date=d.date||localDate();TK.total=typeof d.amount==='number'?d.amount:null;TK.currency=d.currency||'ARS';TK.warnings=d.warnings||[];
+    $('#tkPick').classList.add('hidden');tkShowForm();
+    if(d.account)fillAccounts($('#tk-account'),d.account);if(d.category){fill($('#tk-category'),DB.cats.expense,d.category);tkRefreshSub(d.sub);}if(d.note)$('#tk-note').value=d.note;tkRefreshPay();return;}
 }
 function tkEdit(id){const t=DB.tx.find(x=>x.id===id);if(!t)return;
   TK.editId=id;TK.items=(t.items||[]).map(i=>Object.assign({},i));TK.merchant=t.merchant||'';TK.date=t.date;TK.total=t.amount;TK.currency=t.currency||'ARS';
@@ -108,13 +113,14 @@ $('#tkSave').onclick=()=>{
   const accName=$('#tk-account').value;if(!accName){toast('Elegí la cuenta');return;}
   const sub=$('#tk-sub').value==='—'?'':$('#tk-sub').value;const category=$('#tk-category').value;
   const note=$('#tk-note').value.trim()||merchant||'ticket';
-  const base={type:'expense',account:accName,category,sub,currency:curOf(accName),note,source:TK.source||'ticket',createdAt:Date.now()};
+  const base={type:'expense',account:accName,category,sub,currency:curOf(accName),note,source:TK.source||'ticket',createdAt:Date.now()};if(TK.inboxId)base.inboxId=TK.inboxId;
   if(merchant)base.merchant=merchant;
   const card=isCard(accName);const sid='u'+Date.now();
   if(card&&TK.pay==='inst'){const n=Math.max(2,parseInt($('#tk-inst').value)||2),per=Math.round(total/n*100)/100;const[fy,fm]=$('#tk-due').value.split('-').map(Number);
     for(let i=0;i<n;i++){const pay=new Date(fy,fm-1+i,1);const rec={...base,id:sid+'_'+i,ticketId:sid,date:shiftMonthStr(date,i),amount:per,dueMonth:ym(pay),purchaseDate:date,inst:[i+1,n],note:note+' ('+(i+1)+'/'+n+')'};
       if(i===0&&items.length)rec.items=items;DB.tx.push(rec);}}
   else{const rec={...base,id:sid,date,amount:total};if(items.length)rec.items=items;if(card){rec.dueMonth=$('#tk-paymonth').value;rec.purchaseDate=date;}DB.tx.push(rec);}
+  if(TK.inboxId){inboxMarkDone([TK.inboxId],'done');TK.inboxId=null;INBOX_EDIT=null;}
   persist();$('#ticketScrim').classList.remove('on');cur=new Date(+date.slice(0,4),+date.slice(5,7)-1,1);setView('trans');toast('Ticket guardado'+(items.length?' · '+items.length+' ítems':''));
 };
 $('#tkDel').onclick=()=>{if(!TK.editId)return;const t=DB.tx.find(x=>x.id===TK.editId);if(!t)return;if(!confirm('¿Quitar el detalle de ítems de este movimiento? (el movimiento queda)'))return;delete t.items;t.updatedAt=Date.now();persist();$('#ticketScrim').classList.remove('on');render();toast('Ítems quitados');};

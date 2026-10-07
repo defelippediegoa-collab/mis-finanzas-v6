@@ -30,7 +30,7 @@ function refreshFx(){if(fType!=='transfer'){$('#fxExtra').classList.add('hidden'
 $('#f-amount').oninput=()=>{setAmtLabel();refreshFx();};$('#f-inst').oninput=setAmtLabel;$('#f-rate').oninput=refreshFx;$('#f-category').onchange=()=>refreshSub();
 $('#f-account').onchange=()=>{refreshPayUI();refreshFx();};$('#f-to').onchange=refreshFx;
 $('#f-date').onchange=()=>{const d=new Date($('#f-date').value+'T12:00:00');if(isNaN(d))return;const nm=ym(new Date(d.getFullYear(),d.getMonth()+1,1));$('#f-paymonth').value=nm;$('#f-due').value=nm;};
-$('#fab').onclick=()=>openSheet(null);$('#closeSheet').onclick=()=>$('#scrim').classList.remove('on');$('#scrim').onclick=e=>{if(e.target===$('#scrim'))$('#scrim').classList.remove('on');};
+$('#fab').onclick=()=>{INBOX_EDIT=null;openSheet(null);};$('#closeSheet').onclick=()=>{INBOX_EDIT=null;$('#scrim').classList.remove('on');};$('#scrim').onclick=e=>{if(e.target===$('#scrim'))$('#scrim').classList.remove('on');};
 document.querySelectorAll('#typeSeg button').forEach(b=>b.onclick=()=>{fType=b.dataset.t;document.querySelectorAll('#typeSeg button').forEach(x=>x.classList.remove('on','inc','tr'));b.classList.add('on');if(fType==='income')b.classList.add('inc');if(fType==='transfer')b.classList.add('tr');fPay='once';document.querySelectorAll('#paySeg button').forEach(x=>x.classList.toggle('on',x.dataset.p==='once'));refreshType();setAmtLabel();});
 document.querySelectorAll('#paySeg button').forEach(b=>b.onclick=()=>{fPay=b.dataset.p;document.querySelectorAll('#paySeg button').forEach(x=>x.classList.toggle('on',x===b));refreshPayUI();setAmtLabel();});
 $('#saveTx').onclick=()=>{
@@ -41,16 +41,18 @@ $('#saveTx').onclick=()=>{
     if(fType==='transfer'){t.type='transfer';t.from=$('#f-account').value;t.to=$('#f-to').value;t.currency=curOf(t.from);t.note=$('#f-note').value||'';delete t.account;delete t.category;delete t.sub;}
     else{t.type=fType;t.account=$('#f-account').value;t.category=$('#f-category').value;t.sub=$('#f-sub').value==='—'?'':$('#f-sub').value;t.currency=curOf(t.account);t.note=$('#f-note').value||'';if(fType==='expense'&&isCard(t.account)&&fPay==='once'){t.dueMonth=$('#f-paymonth').value;}else delete t.dueMonth;}
     persist();$('#scrim').classList.remove('on');cur=new Date(+date.slice(0,4),+date.slice(5,7)-1,1);render();if(detail&&detailRefresh)detailRefresh();toast(wasHist?'Actualizado · ahora afecta el saldo':'Actualizado');return;}
+  const ibx=INBOX_EDIT?{source:'wa',inboxId:INBOX_EDIT}:{}; // vino de la bandeja de WhatsApp
   if(fType==='transfer'){const from=$('#f-account').value,to=$('#f-to').value;const fc=curOf(from),tc=curOf(to);
-    const rec={id:'u'+Date.now(),date,type:'transfer',from,to,amount:amt,currency:fc,note:$('#f-note').value||'',source:'app',createdAt:Date.now()};if(tags.length)rec.tags=tags;
+    const rec={id:'u'+Date.now(),date,type:'transfer',from,to,amount:amt,currency:fc,note:$('#f-note').value||'',source:'app',createdAt:Date.now(),...ibx};if(tags.length)rec.tags=tags;
     if(fc!==tc){const rate=parseFloat($('#f-rate').value)||DB.usdRate;rec.rate=rate;rec.currencyTo=tc;rec.amountTo=convertAmt(amt,fc,tc,rate);}
     DB.tx.push(rec);}
-  else{const sub=$('#f-sub').value==='—'?'':$('#f-sub').value;const accName=$('#f-account').value;const card=isCard(accName);const base={type:fType,account:accName,category:$('#f-category').value,sub,currency:curOf(accName),note:$('#f-note').value||'',source:'app',createdAt:Date.now()};if(tags.length)base.tags=tags;
+  else{const sub=$('#f-sub').value==='—'?'':$('#f-sub').value;const accName=$('#f-account').value;const card=isCard(accName);const base={type:fType,account:accName,category:$('#f-category').value,sub,currency:curOf(accName),note:$('#f-note').value||'',source:'app',createdAt:Date.now(),...ibx};if(tags.length)base.tags=tags;
     if(fType==='expense'&&card&&fPay==='inst'){const n=Math.max(2,parseInt($('#f-inst').value)||2),per=Math.round(amt/n*100)/100;const[fy,fm]=$('#f-due').value.split('-').map(Number);const sid='u'+Date.now();
       for(let i=0;i<n;i++){const pay=new Date(fy,fm-1+i,1); // shiftMonthStr no desborda el mes (31/01 + 1 mes = 28/02, no 03/03)
         DB.tx.push({...base,id:sid+'_'+i,date:shiftMonthStr(date,i),amount:per,dueMonth:ym(pay),purchaseDate:date,inst:[i+1,n],note:(base.note?base.note+' ':'')+'('+(i+1)+'/'+n+')'});}}
     else if(fType==='expense'&&card&&fPay==='sub'){DB.reminders.push({id:'r'+Date.now(),type:'expense',name:(sub||$('#f-category').value||'Suscripción'),amount:amt,freq:'monthly',from:$('#f-subfrom').value,until:'',account:accName,category:$('#f-category').value});persist();$('#scrim').classList.remove('on');setView('proj');toast('Suscripción agregada a recordatorios');return;}
     else{const rec={...base,id:'u'+Date.now(),date,amount:amt};if(fType==='expense'&&card){rec.dueMonth=$('#f-paymonth').value;rec.purchaseDate=date;}DB.tx.push(rec);}}
+  if(INBOX_EDIT){inboxMarkDone([INBOX_EDIT],'done');INBOX_EDIT=null;}
   persist();$('#scrim').classList.remove('on');cur=new Date(+date.slice(0,4),+date.slice(5,7)-1,1);render();toast('Guardado');
 };
 $('#dupTx').onclick=()=>{const t=DB.tx.find(x=>x.id===editId);if(!t)return;

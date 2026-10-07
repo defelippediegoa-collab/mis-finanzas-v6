@@ -23,6 +23,7 @@
   </div>
   <div class="menu" id="menu">
     <button id="ticketBtn">🧾 Escanear ticket</button>
+    <button id="inboxBtn">📥 Pendientes de WhatsApp</button>
     <button id="remindersBtn">Recordatorios</button>
     <button id="pasteRemBtn">Pegar recordatorios de Claude</button>
     <button id="newAccBtn">Nueva cuenta</button>
@@ -43,6 +44,7 @@
 
   <div class="view" id="view-trans">
     <div class="greet"><div class="gh1">Hola, Diego 👋</div><div class="gh2" id="greetDate"></div></div>
+    <div class="inboxbar hidden" id="inboxBar"></div>
     <div class="acchero">
       <div class="balmode"><button class="bm" id="bmMes">Balance del mes</button><button class="bm" id="bmCaja">Balance de caja</button></div>
       <div class="big" id="s-bal">0.00</div>
@@ -178,6 +180,14 @@
   </div>
 </div></div>
 
+<!-- INBOX SHEET -->
+<div class="scrim" id="inboxScrim"><div class="sheet">
+  <h3><span>📥 Pendientes de WhatsApp</span><button class="x" id="closeInbox">×</button></h3>
+  <div class="hint" style="padding:10px 18px 0;color:var(--muted)">Lo que cargaste desde el bot queda acá hasta que lo revises. Al guardar pasa a tus movimientos.</div>
+  <div id="inboxList"></div>
+  <div style="height:14px"></div>
+</div></div>
+
 <!-- ACCOUNT SHEET -->
 <div class="scrim" id="accScrim"><div class="sheet">
   <h3><span id="accTitle">Nueva cuenta</span><button class="x" id="closeAcc">×</button></h3>
@@ -287,6 +297,8 @@
 <script src="js/rules.js"></script>
 <script src="js/views/ticket.js"></script>
 <script src="js/views/items.js"></script>
+<script src="js/views/inbox.js"></script>
+<script src="js/share.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
