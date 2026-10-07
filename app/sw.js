@@ -1,5 +1,5 @@
 // Service worker de Mis Finanzas v6. Subí VERSION en cada deploy: el cache viejo se borra y la app avisa "versión nueva".
-const VERSION='6.3.0';
+const VERSION='6.3.1';
 const CACHE='finanzas-'+VERSION;
 const ASSETS=['./','./index.html','./manifest.webmanifest','./css/app.css',
   './icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png',

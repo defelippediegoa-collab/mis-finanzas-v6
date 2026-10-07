@@ -26,7 +26,7 @@ async function cloudPush(silent,_retry){
   if(!silent)setSyncSt('Estado: subiendo…');
   if(!(await ensureServer(silent))){setSyncSt('Estado: servidor no verificado');return;}
   try{const j=await apiPost('blob',{db:DB});
-    if(j&&j.ok){setSyncSt('Estado: subido '+new Date().toLocaleString('es-AR'));if(!silent)toast('Datos en la nube ✓');return;}
+    if(j&&j.ok){const shErr=j.sheets&&j.sheets!=='ok'?(' · Sheet: '+j.sheets):'';setSyncSt('Estado: subido '+new Date().toLocaleString('es-AR')+shErr);if(!silent)toast(shErr?'Datos en la nube ✓ pero el Sheet falló (revisá SHEET_ID)':'Datos en la nube ✓');return;}
     if(j&&j.code==='STALE'&&!_retry){ // la nube tiene algo más nuevo: fusionamos y volvemos a subir
       const cj=await apiGet('blob');if(cj&&Array.isArray(cj.tx)){DB=mergeDB(DB,cj);DB.updatedAt=Date.now();Store.save(DB);render();return cloudPush(silent,true);}}
     const m=': '+apiErrMsg(j);setSyncSt('Estado: error'+m);if(!silent)toast('No se pudo subir'+m);}

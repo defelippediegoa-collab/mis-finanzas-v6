@@ -1,6 +1,6 @@
 /* ---------- storage ---------- */
 // v6: los datos viven en fin_db_v5 (se sincronizan); la configuración del dispositivo en fin_cfg_v5 (nunca viaja).
-const APP_VERSION='6.3.0';
+const APP_VERSION='6.3.1';
 const KEY='fin_db_v5',KEY_V4='fin_db_v4',CFG_KEY='fin_cfg_v5';
 const DEF_CFG={syncUrl:'',syncToken:'',syncAuto:false,aiModel:'',aiEffort:'low',inboxDoneQueue:[],lastInboxPoll:0};
 const CFG=(()=>{try{return Object.assign({},DEF_CFG,JSON.parse(localStorage.getItem(CFG_KEY)||'{}'));}catch(e){return Object.assign({},DEF_CFG);}})();
