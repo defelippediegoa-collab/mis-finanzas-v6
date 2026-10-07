@@ -1,5 +1,5 @@
 /**
- * Pestañas de solo lectura en el Sheet: "Movimientos" e "Items".
+ * Pestañas de solo lectura en el Sheet: "Movimientos", "Items", "Recordatorios" y "Cuentas".
  * Son una copia para mirar/filtrar en Google Sheets; editarlas NO afecta la app (se pisan en cada sync).
  */
 function sheetDoc() {
@@ -37,4 +37,20 @@ function writeSheets(db) {
   });
   var is = tab(doc, 'Items', ih);
   if (irows.length) is.getRange(2, 1, irows.length, ih.length).setValues(irows);
+
+  var rh = ['Nombre', 'Tipo', 'Importe', 'Frecuencia', 'Desde', 'Hasta', 'Cuenta', 'Categoria', 'Subcategoria', 'Etiquetas', 'Cambios', 'Id'];
+  var rrows = (db.reminders || []).map(function (r) {
+    return [r.name || '', r.type === 'income' ? 'Ingreso' : 'Gasto', Number(r.amount) || 0, r.freq === 'once' ? 'Una vez' : 'Mensual', r.from || '', r.until || '',
+      r.account || '', r.category || '', r.sub || '', (r.tags || []).join(', '),
+      (r.changes || []).map(function (c) { return c.from + ': ' + c.amount; }).join(' · '), r.id || ''];
+  });
+  var rs = tab(doc, 'Recordatorios', rh);
+  if (rrows.length) rs.getRange(2, 1, rrows.length, rh.length).setValues(rrows);
+
+  var ah = ['Cuenta', 'Tipo', 'Moneda', 'SaldoInicial', 'EnTotal', 'Cierre', 'Vencimiento', 'Descripcion'];
+  var arows = (db.accounts || []).map(function (a) {
+    return [a.name || '', a.type || '', a.currency || 'ARS', Number(a.initial) || 0, a.includeInTotal === false ? 'No' : 'Sí', a.cierre || '', a.venc || '', a.desc || ''];
+  });
+  var as = tab(doc, 'Cuentas', ah);
+  if (arows.length) as.getRange(2, 1, arows.length, ah.length).setValues(arows);
 }

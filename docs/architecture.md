@@ -5,7 +5,7 @@
    │  GET/POST blob, meta, inbox, ai        (token compartido, body text/plain)
    ▼
  Google Apps Script  ──▶ Drive: fin_db_v5.json (la base)
-   │                  ──▶ Sheet: Movimientos, Items (solo lectura), Inbox (bandeja)
+   │                  ──▶ Sheet: Movimientos, Items, Recordatorios, Cuentas (solo lectura), Inbox (bandeja)
    │                  ──▶ api.anthropic.com (clave en Script Properties)
    ▲
    │  inboxAppend / meta / ai
