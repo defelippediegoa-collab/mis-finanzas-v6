@@ -10,8 +10,10 @@ $('#closeSync').onclick=()=>$('#syncScrim').classList.remove('on');$('#syncScrim
 $('#sync-auto').onclick=()=>{const on=!$('#sync-auto').classList.contains('on');$('#sync-auto').classList.toggle('on',on);CFG.syncAuto=on;saveCfg();syncStatus();toast(on?'Sincronización automática activada':'Sincronización automática desactivada');};
 $('#syncSaveUrl').onclick=()=>{readSyncForm();syncStatus();toast('Configuración guardada');};
 
-async function apiPost(action,body){const r=await fetch(CFG.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action,token:CFG.syncToken},body||{}))});return r.json();}
-async function apiGet(action,params){const u=new URL(CFG.syncUrl);u.searchParams.set('action',action);u.searchParams.set('token',CFG.syncToken);Object.entries(params||{}).forEach(([k,v])=>u.searchParams.set(k,v));const r=await fetch(u.toString());return r.json();}
+// Si Google devuelve una página HTML (error, login, función no encontrada) mostramos su título y texto en vez de "Unexpected token".
+async function parseJsonResponse(r){const txt=await r.text();try{return JSON.parse(txt);}catch(e){const m=txt.match(/<title>([^<]*)<\/title>/i);const body=txt.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();throw new Error('Google respondió una página en vez de datos: '+(m?m[1].trim()+' · ':'')+body.slice(0,180));}}
+async function apiPost(action,body){const r=await fetch(CFG.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action,token:CFG.syncToken},body||{}))});return parseJsonResponse(r);}
+async function apiGet(action,params){const u=new URL(CFG.syncUrl);u.searchParams.set('action',action);u.searchParams.set('token',CFG.syncToken);Object.entries(params||{}).forEach(([k,v])=>u.searchParams.set(k,v));const r=await fetch(u.toString());return parseJsonResponse(r);}
 function apiPing(){return apiGet('ping');}
 function apiErrMsg(j){if(!j)return 'respuesta vacía';if(j.code==='AUTH')return 'token inválido';return j.error||j.code||'error';}
 
