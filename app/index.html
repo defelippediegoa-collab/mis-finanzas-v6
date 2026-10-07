@@ -22,6 +22,7 @@
     <button class="topbtn" id="menuBtn">⋮</button>
   </div>
   <div class="menu" id="menu">
+    <button id="ticketBtn">🧾 Escanear ticket</button>
     <button id="remindersBtn">Recordatorios</button>
     <button id="pasteRemBtn">Pegar recordatorios de Claude</button>
     <button id="newAccBtn">Nueva cuenta</button>
@@ -67,6 +68,7 @@
     <div class="chartwrap" id="chart"></div>
     <div class="legend" id="legend"></div>
     <div id="st-tags"></div>
+    <div id="st-items"></div>
   </div>
 
   <div class="view hidden" id="view-panel">
@@ -112,6 +114,7 @@
     <div class="n" data-v="acc"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>Cuentas</div>
     <div class="n" data-v="proj"><svg viewBox="0 0 24 24"><path d="M4 18 9 12l4 4 7-9"/><path d="M14 7h6v6"/></svg>Proyec.</div>
   </div>
+  <button class="fab2" id="fabTicket" title="Escanear ticket">🧾</button>
   <button class="fab" id="fab">+</button>
 </div>
 
@@ -126,6 +129,7 @@
   <div class="fld" id="f-sub-wrap"><label>Subcategoría</label><select id="f-sub"></select></div>
   <div class="fld hidden" id="f-note-wrap"><label>Nota</label><input id="f-note" list="note-suggestions" autocomplete="off" placeholder="Empezá a escribir; te sugiere notas ya usadas"><datalist id="note-suggestions"></datalist></div>
   <div class="fld hidden" id="f-tags-wrap"><label>Etiquetas (opcional, separadas por coma)</label><input id="f-tags" list="tag-suggestions" autocomplete="off" placeholder="auto, vacaciones…"><datalist id="tag-suggestions"></datalist></div>
+  <div class="fld hidden" id="f-items-wrap"><button class="editbtn" id="f-items-btn" style="margin:0;width:100%"></button></div>
   <div class="extra hidden" id="fxExtra"><div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Tipo de cambio</label><input type="number" id="f-rate" inputmode="decimal" placeholder="0"></div><div><label style="font-size:12px;color:var(--muted)" id="fxToLbl">Recibe</label><input id="f-amountto" disabled></div></div><div class="hint" style="padding:0 18px" id="fxHint"></div></div>
   <div class="fld"><label>Fecha</label><input type="date" id="f-date"></div>
   <div id="payModeWrap">
@@ -138,6 +142,40 @@
   <button class="save" id="saveTx">Guardar</button>
   <button class="del hidden" id="dupTx" style="color:var(--income);border-color:var(--income)">Duplicar (mes siguiente)</button>
   <button class="del hidden" id="delTx">Eliminar movimiento</button>
+</div></div>
+
+<!-- TICKET SHEET -->
+<div class="scrim" id="ticketScrim"><div class="sheet">
+  <h3><span id="tkTitle">Escanear ticket</span><button class="x" id="closeTicket">×</button></h3>
+  <div id="tkPick">
+    <button class="editbtn" id="tkCam">📷 Sacar foto del ticket</button>
+    <button class="editbtn" id="tkFile" style="margin-top:0">🖼️ Elegir imagen o PDF</button>
+    <button class="editbtn" id="tkManual" style="margin-top:0">✍️ Cargar los ítems a mano</button>
+    <div class="hint" id="tkAiHint" style="padding:0 18px 16px;color:var(--muted)"></div>
+    <input type="file" id="tkCamIn" accept="image/*" capture="environment" class="hidden">
+    <input type="file" id="tkFileIn" accept="image/*,application/pdf" class="hidden">
+  </div>
+  <div id="tkBusy" class="hidden" style="padding:28px 18px;text-align:center;color:var(--muted)"><div class="spin"></div><div id="tkBusyTxt" style="margin-top:12px">Leyendo el ticket…</div></div>
+  <div id="tkForm" class="hidden">
+    <div id="tkPreview" class="tkpreview"></div>
+    <div class="ratebox hidden" id="tkWarn" style="color:var(--warn,#e0bd6a);font-size:12px"></div>
+    <div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Comercio</label><input id="tk-merchant" placeholder="COTO, Día…"></div><div><label style="font-size:12px;color:var(--muted)">Fecha</label><input type="date" id="tk-date"></div></div>
+    <div class="fld"><label>Total pagado</label><input type="number" class="big" id="tk-total" inputmode="decimal" placeholder="0"></div>
+    <div class="fld"><label>Ítems <small style="color:var(--muted2)">(descripción · cantidad · importe)</small></label><div id="tkItems"></div><button class="editbtn" id="tkAdd" style="margin:8px 0 0;width:100%;padding:9px">+ Agregar ítem</button><div class="hint" id="tkSum" style="margin-top:8px"></div></div>
+    <div id="tkPayWrap">
+      <div class="fld"><label>Cuenta (con qué pagaste)</label><select id="tk-account"></select></div>
+      <div id="tkCard" class="hidden">
+        <div class="seg" id="tkPaySeg" style="margin-top:4px"><button class="on" data-p="once">Pago único</button><button data-p="inst">Cuotas</button></div>
+        <div id="tkOnce" class="fld" style="padding-top:0"><label>Mes de pago</label><input type="month" id="tk-paymonth"></div>
+        <div id="tkInst" class="row2 hidden" style="padding:0 18px 6px"><div><label style="font-size:12px;color:var(--muted)">Mes 1ª cuota</label><input type="month" id="tk-due"></div><div><label style="font-size:12px;color:var(--muted)">N° de cuotas</label><input type="number" id="tk-inst" value="3" min="2" max="60"></div></div>
+      </div>
+      <div class="fld"><label>Categoría</label><select id="tk-category"></select></div>
+      <div class="fld"><label>Subcategoría</label><select id="tk-sub"></select></div>
+      <div class="fld"><label>Nota</label><input id="tk-note" placeholder="Se usa el comercio si lo dejás vacío"></div>
+    </div>
+    <button class="save" id="tkSave">Guardar</button>
+    <button class="del hidden" id="tkDel">Quitar el detalle de ítems</button>
+  </div>
 </div></div>
 
 <!-- ACCOUNT SHEET -->
@@ -244,6 +282,11 @@
 <script src="js/views/cats.js"></script>
 <script src="js/misc.js"></script>
 <script src="js/sync.js"></script>
+<script src="js/image.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/views/ticket.js"></script>
+<script src="js/views/items.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

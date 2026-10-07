@@ -13,6 +13,8 @@ function openSheet(id,preset){
   $('#f-tags').value=t&&t.tags?t.tags.join(', '):(preset&&preset.tags?preset.tags.join(', '):'');
   $('#tag-suggestions').innerHTML=[...new Set(DB.tx.flatMap(x=>x.tags||[]))].sort().map(g=>'<option value="'+esc(g)+'">').join('');
   refreshNoteSuggestions();
+  {const w=$('#f-items-wrap');const has=t&&Array.isArray(t.items)&&t.items.length;w.classList.toggle('hidden',!t||t.type!=='expense');
+    if(t&&t.type==='expense'){$('#f-items-btn').textContent=has?('🧾 '+t.items.length+' ítems · ver / editar'):'🧾 Agregar detalle de ítems';$('#f-items-btn').onclick=()=>{$('#scrim').classList.remove('on');openTicket({editId:t.id});};}}
   document.querySelectorAll('#paySeg button').forEach(b=>b.classList.toggle('on',b.dataset.p==='once'));
   refreshType();
   const src=t||preset||{};

@@ -10,10 +10,10 @@ function renderStats(){
   const arr=Object.entries(by).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
   const total=arr.reduce((s,a)=>s+a.v,0);arr.forEach((a,i)=>a.color=colorFor(a.k,i));
   $('#chart').innerHTML=total?pieSVG(arr,total):'';
-  if(!total){$('#legend').innerHTML='<div class="empty">Sin '+(statKind==='income'?'ingresos':'gastos')+' en <b>'+monthName(cur)+'</b>.</div>';renderFlow();return;}
+  if(!total){$('#legend').innerHTML='<div class="empty">Sin '+(statKind==='income'?'ingresos':'gastos')+' en <b>'+monthName(cur)+'</b>.</div>';renderFlow();renderTagStats();renderItemStats();return;}
   $('#legend').innerHTML=arr.map(a=>'<div class="leg" data-cat="'+a.k+'"><div class="pct" style="background:'+a.color+'">'+(a.v/total*100).toFixed(0)+'%</div><div class="name">'+a.k+'</div><div class="lv">'+money(a.v)+'</div></div>').join('');
   document.querySelectorAll('#legend .leg').forEach(el=>el.onclick=()=>openCategoryDetail(el.dataset.cat));
-  renderFlow();renderTagStats();
+  renderFlow();renderTagStats();renderItemStats();
 }
 function renderTagStats(){
   const m=ym(cur);const byTag={};
