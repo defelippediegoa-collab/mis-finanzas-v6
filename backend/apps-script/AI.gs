@@ -4,6 +4,7 @@
  * Request: {action:'ai', token, task:'ticket'|'parse', model?, effort?, ...campos de la tarea}
  *   ticket: {image:{media_type:'image/jpeg'|'image/png'|'image/webp'|'application/pdf', data:<base64>}, hint?:{date:'YYYY-MM-DD'}}
  *   parse : {text:'1500 super galicia', meta:{accounts:[nombres], cats:{expense,income}, subs:{}}, today:'YYYY-MM-DD'}
+ *   products: {descs:[{i,desc,unit,merchant}] (máx 60), catalog:{kinds:[], products:[{id,name,kind,variety,brand,size,unit,aliases}]}}
  * Response: {ok:true, task, result:{...}, usage:{input_tokens,output_tokens}, model}
  */
 var AI_URL = 'https://api.anthropic.com/v1/messages';
@@ -42,6 +43,16 @@ function aiHandle(body) {
       'Categorías: ' + JSON.stringify(m.cats || {}) + '\n' +
       'Subcategorías por categoría: ' + JSON.stringify(m.subs || {}) + '\n\n' +
       'Mensaje: ' + String(body.text).slice(0, 500) }];
+  } else if (task === 'products') {
+    var descs = body.descs;
+    if (!Array.isArray(descs) || !descs.length) return err('BAD_REQUEST', 'falta descs');
+    if (descs.length > 60) return err('BAD_REQUEST', 'máximo 60 descripciones por llamada');
+    var cat = body.catalog || { kinds: [], products: [] };
+    system = PRODUCTS_SYSTEM; schema = PRODUCTS_SCHEMA; maxTokens = 8192;
+    content = [{ type: 'text', text:
+      'Kinds existentes: ' + JSON.stringify(cat.kinds || []) + '\n' +
+      'Productos del catálogo: ' + JSON.stringify(cat.products || []) + '\n\n' +
+      'Ítems a clasificar (i, desc, unit, merchant): ' + JSON.stringify(descs.map(function (d) { return { i: d.i, desc: String(d.desc || '').slice(0, 80), unit: d.unit || '', merchant: d.merchant || '' }; })) }];
   } else {
     return err('BAD_REQUEST', 'task desconocida: ' + task);
   }

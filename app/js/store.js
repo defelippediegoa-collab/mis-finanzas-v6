@@ -1,8 +1,8 @@
 /* ---------- storage ---------- */
 // v6: los datos viven en fin_db_v5 (se sincronizan); la configuración del dispositivo en fin_cfg_v5 (nunca viaja).
-const APP_VERSION='6.4.0';
+const APP_VERSION='6.5.0';
 const KEY='fin_db_v5',KEY_V4='fin_db_v4',CFG_KEY='fin_cfg_v5';
-const DEF_CFG={syncUrl:'',syncToken:'',syncAuto:false,aiModel:'',aiEffort:'low',inboxDoneQueue:[],lastInboxPoll:0};
+const DEF_CFG={syncUrl:'',syncToken:'',syncAuto:false,aiModel:'',aiEffort:'low',inboxDoneQueue:[],lastInboxPoll:0,priceBasis:'paid'};
 const CFG=(()=>{try{return Object.assign({},DEF_CFG,JSON.parse(localStorage.getItem(CFG_KEY)||'{}'));}catch(e){return Object.assign({},DEF_CFG);}})();
 function saveCfg(){try{localStorage.setItem(CFG_KEY,JSON.stringify(CFG));}catch(e){}}
 const Store={_m:null,
@@ -63,7 +63,20 @@ function normalize(d,opts){opts=opts||{};
     if(t.category&&!d.cats[b].includes(t.category))d.cats[b].push(t.category);
     if(t.category){d.subs[t.category]=d.subs[t.category]||[];if(t.sub&&!d.subs[t.category].includes(t.sub))d.subs[t.category].push(t.sub);}});
   d.tx.forEach(t=>{if(Array.isArray(t.items))t.items.forEach(i=>{if(!i.key)i.key=normKey(i.desc);if(typeof i.qty!=='number')i.qty=1;});});
+  normalizeProducts(d);
   return d;
+}
+// Productos: defaults, alias únicos (gana el updatedAt mayor), fusiones resueltas y productId re-derivado desde el alias.
+function normalizeProducts(d){
+  d.products=Array.isArray(d.products)?d.products:[];
+  d.products.forEach(p=>{p.name=String(p.name||'Producto');p.kind=String(p.kind||'').toLowerCase();p.variety=String(p.variety||'').toLowerCase();p.brand=String(p.brand||'');p.unit=p.unit||'u';p.size=String(p.size||'');p.aliases=[...new Set((p.aliases||[]).map(normKey).filter(Boolean))];if(p.mergedInto===undefined)p.mergedInto=null;p.createdAt=p.createdAt||0;p.updatedAt=p.updatedAt||p.createdAt||0;});
+  const byId=new Map(d.products.map(p=>[p.id,p]));
+  const resolve=id=>{let p=byId.get(id),n=0;while(p&&p.mergedInto&&n++<10)p=byId.get(p.mergedInto);return p&&!p.mergedInto?p:null;};
+  const owner=new Map();
+  d.products.filter(p=>!p.mergedInto).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).forEach(p=>{p.aliases=p.aliases.filter(a=>{if(owner.has(a))return false;owner.set(a,p.id);return true;});});
+  d.tx.forEach(t=>{if(!Array.isArray(t.items))return;t.items.forEach(i=>{
+    if(i.productId){const p=resolve(i.productId);if(!p)delete i.productId;else i.productId=p.id;}
+    if(!i.productId&&!i.discount){const pid=owner.get(i.key);if(pid)i.productId=pid;}});});
 }
 // Fusión por id cuando la nube tiene datos más nuevos que los nuestros (STALE): no se pierde nada de ningún lado.
 // Mismo id en ambos → gana el que tenga updatedAt mayor (si no hay, el local). Lo borrado en un lado puede volver; es el precio de no perder datos.
@@ -77,6 +90,8 @@ function mergeDB(local,cloud){
   Object.keys(local.subs).forEach(c=>{out.subs[c]=out.subs[c]||[];local.subs[c].forEach(s=>{if(!out.subs[c].includes(s))out.subs[c].push(s);});});
   Object.assign(out.paid,local.paid);
   const ruleIds=new Set(out.rules.map(r=>r.id));local.rules.forEach(r=>{if(!ruleIds.has(r.id))out.rules.push(r);});
+  const pById=new Map(out.products.map(p=>[p.id,p]));(local.products||[]).forEach(p=>{const c=pById.get(p.id);if(!c){out.products.push(p);return;}const w=(p.updatedAt||0)>(c.updatedAt||0)?p:c;const al=[...new Set([...(c.aliases||[]),...(p.aliases||[])])];const mi=c.mergedInto||p.mergedInto||null;Object.assign(c,w);c.aliases=al;c.mergedInto=mi;});
+  (local.loans||[]).forEach(l=>{out.loans=out.loans||[];if(!out.loans.some(x=>x.id===l.id))out.loans.push(l);});
   return normalize(out);
 }
 /* group/type */

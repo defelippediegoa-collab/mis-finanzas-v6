@@ -25,6 +25,7 @@
     <button id="ticketBtn">🧾 Escanear ticket</button>
     <button id="inboxBtn">📥 Pendientes de WhatsApp</button>
     <button id="bulkBtn">☑️ Edición masiva</button>
+    <button id="productsBtn">🏷️ Productos y precios</button>
     <button id="remindersBtn">Recordatorios</button>
     <button id="pasteRemBtn">Pegar recordatorios de Claude</button>
     <button id="newAccBtn">Nueva cuenta</button>
@@ -194,6 +195,31 @@
   <button class="editbtn" id="tkcSame" style="margin:0 18px 20px;width:calc(100% - 36px)">= Igual que el ticket</button>
 </div></div>
 
+<!-- PRODUCT PICKER -->
+<div class="scrim" id="prodPickScrim" style="z-index:26"><div class="sheet">
+  <h3><span id="ppTitle">Producto</span><button class="x" id="closePP">×</button></h3>
+  <div class="fld"><input id="ppSearch" placeholder="Buscar producto…" autocomplete="off"></div>
+  <div id="ppList"></div>
+  <div style="padding:8px 18px 4px"><button class="editbtn" id="ppCreateBtn" style="margin:0;width:100%">+ Crear producto nuevo</button></div>
+  <div id="ppCreate" class="hidden">
+    <div class="fld"><label>Nombre</label><input id="pp-name" placeholder="Queso cremoso Punta del Agua"></div>
+    <div class="row2" style="padding:4px 18px"><div><label style="font-size:12px;color:var(--muted)">Tipo genérico</label><input id="pp-kind" list="pp-kinds" placeholder="queso cremoso"><datalist id="pp-kinds"></datalist></div><div><label style="font-size:12px;color:var(--muted)">Variedad</label><input id="pp-variety" placeholder="instantáneo"></div></div>
+    <div class="row2" style="padding:4px 18px"><div><label style="font-size:12px;color:var(--muted)">Marca</label><input id="pp-brand" list="pp-brands" placeholder="Punta del Agua"><datalist id="pp-brands"></datalist></div><div><label style="font-size:12px;color:var(--muted)">Tamaño</label><input id="pp-size" placeholder="1 l · 500 g · x6"></div></div>
+    <div class="fld"><label>Precio por</label><select id="pp-unit"><option value="u">unidad</option><option value="kg">kg</option><option value="l">litro</option></select></div>
+    <button class="save" id="ppCreateOk">Crear y vincular</button>
+  </div>
+  <button class="del hidden" id="ppUnlink">Quitar vínculo con el producto</button>
+  <div style="height:10px"></div>
+</div></div>
+
+<!-- PRODUCT BULK LINK -->
+<div class="scrim" id="prodLinkScrim" style="z-index:25"><div class="sheet bulk">
+  <h3><span>🏷️ Vincular ítems a productos</span><button class="x" id="closePL">×</button></h3>
+  <div class="hint" style="padding:10px 18px 6px;color:var(--muted)">Ítems de tus tickets que todavía no tienen producto. Marcá los correctos, elegí con … o completá con la IA.</div>
+  <div id="plList"></div>
+  <div class="bkactions"><div class="row2" style="padding:10px 18px 16px"><button class="editbtn hidden" id="plAi" style="margin:0;width:100%">✨ Completar con IA</button><button class="save" id="plApply" style="margin:0;width:100%">Aplicar</button></div></div>
+</div></div>
+
 <!-- INBOX SHEET -->
 <div class="scrim" id="inboxScrim"><div class="sheet">
   <h3><span>📥 Pendientes de WhatsApp</span><button class="x" id="closeInbox">×</button></h3>
@@ -332,8 +358,10 @@
 <script src="js/image.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/rules.js"></script>
+<script src="js/products.js"></script>
 <script src="js/views/ticket.js"></script>
 <script src="js/views/items.js"></script>
+<script src="js/views/products.js"></script>
 <script src="js/views/inbox.js"></script>
 <script src="js/share.js"></script>
 <script src="js/views/bulk.js"></script>

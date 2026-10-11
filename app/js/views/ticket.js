@@ -17,10 +17,35 @@ function openTicket(preset){ // preset opcional: {file} (desde Compartir) | {edi
     TK.items=(d.items||[]).map(i=>tkItem({desc:i.desc,qty:i.qty,unit:i.unit,unitPrice:i.unitPrice!=null?i.unitPrice:i.unit_price,amount:i.amount,discount:!!(i.discount||i.is_discount)}));
     tkDefaultDiscountModes();
     TK.merchant=d.merchant||'';TK.date=d.date||localDate();TK.total=typeof d.amount==='number'?d.amount:null;TK.currency=d.currency||'ARS';TK.warnings=d.warnings||[];
-    $('#tkPick').classList.add('hidden');tkShowForm();
+    $('#tkPick').classList.add('hidden');tkShowForm();tkAutoLink(false);
     if(d.account)fillAccounts($('#tk-account'),d.account);if(d.category){fill($('#tk-category'),DB.cats.expense,d.category);tkRefreshSub(d.sub);}if(d.note)$('#tk-note').value=d.note;tkRefreshPay();return;}
 }
-function tkItem(o){return{desc:o.desc||'',qty:typeof o.qty==='number'&&o.qty>0?o.qty:1,unit:o.unit||'u',unitPrice:typeof o.unitPrice==='number'?o.unitPrice:null,amount:typeof o.amount==='number'?o.amount:0,discount:!!o.discount,dmode:o.dmode||'line',cat:o.cat||null,pos:o.pos};}
+function tkItem(o){return{desc:o.desc||'',qty:typeof o.qty==='number'&&o.qty>0?o.qty:1,unit:o.unit||'u',unitPrice:typeof o.unitPrice==='number'?o.unitPrice:null,amount:typeof o.amount==='number'?o.amount:0,discount:!!o.discount,dmode:o.dmode||'line',cat:o.cat||null,pos:o.pos,productId:o.productId||null,_m:null};}
+// Vincula los ítems a productos: alias exacto/heurística al instante; IA en segundo plano si está disponible (nunca bloquea Guardar)
+async function tkAutoLink(useAi){const rows=TK.items.filter(i=>!i.discount&&!i.productId&&(i.desc||'').trim());if(!rows.length)return;
+  const m=matchDescs(rows.map(i=>({desc:i.desc,unit:i.unit})));rows.forEach((i,k)=>{if(m[k].status==='exact'||m[k].status==='auto'){i.productId=m[k].productId;i._m=null;}else i._m=m[k];});
+  tkRenderChips();
+  if(!useAi)return;const todo=rows.filter(i=>!i.productId);if(!todo.length)return;
+  try{const inf=await aiInfo();if(!inf.ai)return;const descs=todo.map((i,k)=>({i:k,desc:i.desc,unit:i.unit,merchant:TK.merchant||''}));const res=await aiProducts(descs,buildAiCatalog(descs));
+    (res.results||[]).forEach(x=>{const it=todo[x.i];if(!it||it.productId)return;const conf=x.confidence||0;
+      if(x.productId&&productById(x.productId)){if(conf>=0.8)it.productId=x.productId;else it._m={status:'suggest',candidates:[{id:x.productId,score:conf}]};}
+      else if(x.new&&x.new.name)it._m={status:'new',nw:x.new,candidates:(it._m&&it._m.candidates)||[],score:conf};});
+    tkRenderChips();}catch(e){}}
+function tkChipHtml(i){if(i.discount)return'';const p=i.productId?productById(i.productId):null;
+  if(p)return '<button class="tkprod set" title="Producto">🏷 '+esc(p.name)+'</button>';
+  if(i._m&&i._m.status==='new')return '<button class="tkprod sug" title="Crear producto sugerido por la IA">＋ '+esc(i._m.nw.name)+'?</button>';
+  if(i._m&&i._m.candidates&&i._m.candidates.length){const c=productById(i._m.candidates[0].id);if(c)return '<button class="tkprod sug" title="Sugerido: tocá para confirmar">≈ '+esc(c.name)+'?</button>';}
+  return '<button class="tkprod" title="Vincular a un producto para seguir su precio">¿producto?</button>';}
+function tkRenderChips(){$('#tkItems').querySelectorAll('.tkrow').forEach(row=>{const k=+row.dataset.k;const it=TK.items[k];if(!it||it.discount)return;let el=row.querySelector('.tkprod');const html=tkChipHtml(it);
+    if(el){el.outerHTML=html;}else row.querySelector('.tk2').insertAdjacentHTML('beforeend',html);el=row.querySelector('.tkprod');if(el)el.onclick=()=>tkChipClick(k);});}
+function tkChipClick(k){const it=TK.items[k];const m=it._m||{};
+  if(!it.productId&&m.status==='suggest'&&m.candidates.length&&m.candidates[0].score>=0.7){it.productId=m.candidates[0].id;it._m=null;tkRenderChips();toast('Vinculado · tocá de nuevo para cambiar');return;}
+  if(!it.productId&&m.status==='new'){ // la IA propone un producto nuevo: abrir el picker con el formulario prellenado
+    openProductPicker({desc:it.desc,unit:it.unit,suggestions:m.candidates,newDefaults:m.nw,alsoCandidates:tkOtherRows(k)}).then(r=>tkApplyPick(k,r));return;}
+  openProductPicker({desc:it.desc,unit:it.unit,suggestions:m.candidates||[],currentId:it.productId,alsoCandidates:tkOtherRows(k)}).then(r=>tkApplyPick(k,r));}
+function tkOtherRows(k){return TK.items.map((x,j)=>({desc:x.desc,key:'row:'+j,j})).filter(o=>o.j!==k&&!TK.items[o.j].discount&&!TK.items[o.j].productId);}
+function tkApplyPick(k,r){if(!r)return;const it=TK.items[k];if(r.unlink){it.productId=null;it._m=null;}else if(r.productId){it.productId=r.productId;it._m=null;(r.alsoKeys||[]).forEach(key=>{const j=+key.slice(4);if(TK.items[j]){TK.items[j].productId=r.productId;TK.items[j]._m=null;}});}
+  tkRenderChips();}
 // Descuento al final del ticket → repartir; descuento entre ítems → al ítem de arriba. El usuario puede cambiarlo.
 function tkDefaultDiscountModes(){const n=TK.items.length;TK.items.forEach((i,k)=>{if(!i.discount||i._modeSet)return;const after=TK.items.slice(k+1).some(x=>!x.discount);i.dmode=after?'prev':'spread';});}
 
@@ -35,7 +60,7 @@ function tkEdit(id){const t=DB.tx.find(x=>x.id===id);if(!t)return;
   firsts.forEach(p=>{const isMain=p===main;(p.items||[]).forEach(i=>{
     if(i.discount||i.amount<0){rows.push(tkItem({desc:i.desc,qty:i.qty,unit:i.unit,unitPrice:null,amount:i.amount,discount:true,dmode:'line',pos:i.pos}));return;}
     const printed=Math.round((i.amount+(i.discountAlloc||0))*100)/100;
-    rows.push(tkItem({desc:i.desc,qty:i.qty,unit:i.unit,unitPrice:i.listPrice!=null?i.listPrice:i.unitPrice,amount:printed,cat:isMain?null:{category:p.category,sub:p.sub||''},pos:i.pos}));});});
+    rows.push(tkItem({desc:i.desc,qty:i.qty,unit:i.unit,unitPrice:i.listPrice!=null?i.listPrice:i.unitPrice,amount:printed,cat:isMain?null:{category:p.category,sub:p.sub||''},pos:i.pos,productId:i.productId}));});});
   (main.discounts||[]).forEach(d=>{if(d.mode==='line')return;rows.push(tkItem({desc:d.desc,qty:1,unit:'u',amount:-Math.abs(d.amount),discount:true,dmode:d.mode,pos:d.pos}));});
   rows.forEach((r,k)=>{if(r.pos==null)r.pos=1000+k;r._modeSet=true;});rows.sort((a,b)=>a.pos-b.pos);
   TK.items=rows;
@@ -43,7 +68,7 @@ function tkEdit(id){const t=DB.tx.find(x=>x.id===id);if(!t)return;
   // total del ticket = suma de todas las partes (por cuota × cuotas)
   TK.total=Math.round(parts.reduce((s,p)=>s+p.amount,0)*100)/100; // suma de todas las partes y cuotas
   $('#tkTitle').textContent='Ítems del ticket'+(parts.length>1?' · '+firsts.length+' parte'+(firsts.length>1?'s':'')+(main.inst?' × '+main.inst[1]+' cuotas':''):'');$('#tkDel').classList.remove('hidden');
-  tkShowForm(main);
+  tkShowForm(main);tkAutoLink(false);
 }
 async function tkProcess(file){
   $('#tkPick').classList.add('hidden');$('#tkBusy').classList.remove('hidden');$('#tkBusyTxt').textContent='Leyendo el ticket…';
@@ -57,7 +82,7 @@ async function tkProcess(file){
     tkDefaultDiscountModes();
     if(res.payment_hint)TK.paymentHint=res.payment_hint;
     if(typeof res.confidence==='number'&&res.confidence<0.5)TK.warnings.unshift('La IA no está segura de esta lectura (confianza '+Math.round(res.confidence*100)+'%). Revisá los números.');
-    tkShowForm();
+    tkShowForm();tkAutoLink(true);
     if(TK.previewUrl)$('#tkPreview').innerHTML='<img src="'+TK.previewUrl+'" alt="ticket">';
   }catch(e){toast(e.message||'No se pudo leer el ticket');tkManual();}
 }
@@ -108,14 +133,14 @@ function tkRenderItems(){
     '<input class="tk-amt" type="number" inputmode="decimal" step="any" value="'+(i.amount==null?'':i.amount)+'" placeholder="0" title="Importe">'+
     '<button class="tk-x" title="Quitar">×</button><div class="tk2">'+line2+'</div></div>';}).join('');
   box.querySelectorAll('.tkrow').forEach(row=>{const k=+row.dataset.k;
-    row.querySelector('.tk-desc').oninput=e=>{TK.items[k].desc=e.target.value;};
+    row.querySelector('.tk-desc').oninput=e=>{TK.items[k].desc=e.target.value;};row.querySelector('.tk-desc').onblur=()=>{const it=TK.items[k];if(it&&!it.discount&&!it.productId&&it.desc.trim()){const m=matchDescs([{desc:it.desc,unit:it.unit}])[0];if(m.status==='exact'||m.status==='auto')it.productId=m.productId;else it._m=m;tkRenderChips();}};
     row.querySelector('.tk-qty').oninput=e=>{TK.items[k].qty=parseFloat(e.target.value)||1;};
     row.querySelector('.tk-amt').oninput=e=>{const it=TK.items[k];it.amount=parseFloat(e.target.value)||0;const wasD=it.discount;it.discount=it.amount<0;if(it.discount!==wasD){it._modeSet=false;tkDefaultDiscountModes();tkRenderItems();return;}tkSumHint();};
     row.querySelector('.tk-x').onclick=()=>{TK.items.splice(k,1);tkRenderItems();};
     const dm=row.querySelector('.tk-dmode');if(dm)dm.onchange=()=>{TK.items[k].dmode=dm.value;TK.items[k]._modeSet=true;tkPreviewAlloc();};
     const cb=row.querySelector('.tkcat');if(cb)cb.onclick=()=>openTkCatPicker(k);});
   const hasD=TK.items.some(i=>i.discount);$('#tkDiscBar').classList.toggle('hidden',!hasD);
-  tkPreviewAlloc();tkSumHint();
+  tkRenderChips();tkPreviewAlloc();tkSumHint();
 }
 $('#tkSpreadAll').onclick=e=>{e.preventDefault();TK.items.forEach(i=>{if(i.discount){i.dmode='spread';i._modeSet=true;}});tkRenderItems();};
 // Muestra cuánto descuento le toca a cada ítem con los modos actuales

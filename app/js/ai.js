@@ -23,6 +23,8 @@ async function aiTicket(file){
   const j=await aiCall('ticket',{image:{media_type:p.media_type,data:p.data},hint:{date:localDate()}});
   return{result:j.result,usage:j.usage,model:j.model,previewUrl:p.previewUrl};
 }
+// Descripciones de ítems → producto existente o nuevo (catálogo compacto de products.js)
+async function aiProducts(descs,catalog){const j=await aiCall('products',{descs,catalog});return j.result;}
 // Texto libre → movimiento sugerido
 async function aiParse(text){
   const meta={accounts:accountNames(),cats:DB.cats,subs:DB.subs};
