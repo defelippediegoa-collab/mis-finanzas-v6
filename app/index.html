@@ -164,7 +164,7 @@
     <div class="ratebox hidden" id="tkWarn" style="color:var(--warn,#e0bd6a);font-size:12px"></div>
     <div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Comercio</label><input id="tk-merchant" placeholder="COTO, Día…"></div><div><label style="font-size:12px;color:var(--muted)">Fecha</label><input type="date" id="tk-date"></div></div>
     <div class="fld"><label>Total pagado</label><input type="number" class="big" id="tk-total" inputmode="decimal" placeholder="0"></div>
-    <div class="fld"><label>Ítems <small style="color:var(--muted2)">(descripción · cantidad · importe)</small></label><div id="tkItems"></div><button class="editbtn" id="tkAdd" style="margin:8px 0 0;width:100%;padding:9px">+ Agregar ítem</button><div class="hint" id="tkSum" style="margin-top:8px"></div></div>
+    <div class="fld"><label>Ítems <small style="color:var(--muted2)">(descripción · cantidad · importe · tocá la categoría para cambiarla por ítem)</small></label><div class="hint hidden" id="tkDiscBar" style="margin:0 0 8px"><a href="#" id="tkSpreadAll">↔ Repartir todos los descuentos entre los ítems</a></div><div id="tkItems"></div><button class="editbtn" id="tkAdd" style="margin:8px 0 0;width:100%;padding:9px">+ Agregar ítem</button><div class="hint" id="tkSum" style="margin-top:8px"></div></div>
     <div id="tkPayWrap">
       <div class="fld"><label>Cuenta (con qué pagaste)</label><select id="tk-account"></select></div>
       <div id="tkCard" class="hidden">
@@ -172,13 +172,26 @@
         <div id="tkOnce" class="fld" style="padding-top:0"><label>Mes de pago</label><input type="month" id="tk-paymonth"></div>
         <div id="tkInst" class="row2 hidden" style="padding:0 18px 6px"><div><label style="font-size:12px;color:var(--muted)">Mes 1ª cuota</label><input type="month" id="tk-due"></div><div><label style="font-size:12px;color:var(--muted)">N° de cuotas</label><input type="number" id="tk-inst" value="3" min="2" max="60"></div></div>
       </div>
-      <div class="fld"><label>Categoría</label><select id="tk-category"></select></div>
+    </div>
+    <div id="tkCatWrap">
+      <div class="fld"><label>Categoría del ticket</label><select id="tk-category"></select></div>
       <div class="fld"><label>Subcategoría</label><select id="tk-sub"></select></div>
       <div class="fld"><label>Nota</label><input id="tk-note" placeholder="Se usa el comercio si lo dejás vacío"></div>
     </div>
     <button class="save" id="tkSave">Guardar</button>
     <button class="del hidden" id="tkDel">Quitar el detalle de ítems</button>
   </div>
+</div></div>
+
+<!-- TICKET ITEM CATEGORY PICKER -->
+<div class="scrim" id="tkCatScrim" style="z-index:25"><div class="sheet">
+  <h3><span>Categoría del ítem</span><button class="x" id="closeTkCat">×</button></h3>
+  <div class="hint" style="padding:10px 18px 0;color:var(--muted)" id="tkcItem"></div>
+  <div class="fld"><label>Categoría</label><select id="tkc-cat"></select></div>
+  <div class="fld"><label>Subcategoría</label><select id="tkc-sub"></select></div>
+  <div style="padding:0 18px" id="tkcOthers"></div>
+  <button class="save" id="tkcOk">Usar esta categoría</button>
+  <button class="editbtn" id="tkcSame" style="margin:0 18px 20px;width:calc(100% - 36px)">= Igual que el ticket</button>
 </div></div>
 
 <!-- INBOX SHEET -->

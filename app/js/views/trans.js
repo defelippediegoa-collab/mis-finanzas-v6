@@ -108,7 +108,7 @@ function txRow(t){
   let cn,sn,mid,amt,cls,c=t.currency||'ARS';
   if(t.type==='transfer'){cn='Transferencia';sn='';mid=t.from+' → '+t.to;amt=money(t.amount,c);cls='';}
   else{cn=t.category||'';sn=t.sub||'';mid=t.account||'';amt=money(t.amount,c);cls=t.type==='income'?'pos':'neg';}
-  let b='';if(t.inst)b+='<span class="badge">'+t.inst[0]+'/'+t.inst[1]+'</span>';if(t.dueMonth)b+='<span class="badge future">paga '+t.dueMonth+'</span>';
+  let b='';if(t.items&&t.items.length)b+='<span class="badge tk">🧾'+(t.ticketPart?' '+t.ticketPart[0]+'/'+t.ticketPart[1]:'')+'</span>';else if(t.ticketPart)b+='<span class="badge tk">parte '+t.ticketPart[0]+'/'+t.ticketPart[1]+'</span>';if(t.inst)b+='<span class="badge">'+t.inst[0]+'/'+t.inst[1]+'</span>';if(t.dueMonth)b+='<span class="badge future">paga '+t.dueMonth+'</span>';
   (t.tags||[]).forEach(g=>b+='<span class="tagchip" data-tag="'+esc(g)+'">#'+esc(g)+'</span>');
   return '<div class="tx" data-id="'+t.id+'"><div class="cat"><div class="cn">'+cn+'</div><div class="sn">'+(sn||'&nbsp;')+'</div></div><div class="mid"><span class="midtx">'+mid+'</span>'+b+'</div><div class="amt '+cls+'">'+amt+'</div></div>';
 }

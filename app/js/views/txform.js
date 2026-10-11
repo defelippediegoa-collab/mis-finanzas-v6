@@ -14,7 +14,7 @@ function openSheet(id,preset){
   $('#tag-suggestions').innerHTML=[...new Set(DB.tx.flatMap(x=>x.tags||[]))].sort().map(g=>'<option value="'+esc(g)+'">').join('');
   refreshNoteSuggestions();
   {const w=$('#f-items-wrap');const has=t&&Array.isArray(t.items)&&t.items.length;w.classList.toggle('hidden',!t||t.type!=='expense');
-    if(t&&t.type==='expense'){$('#f-items-btn').textContent=has?('🧾 '+t.items.length+' ítems · ver / editar'):'🧾 Agregar detalle de ítems';$('#f-items-btn').onclick=()=>{$('#scrim').classList.remove('on');openTicket({editId:t.id});};}}
+    if(t&&t.type==='expense'){const tk=t.ticketId?DB.tx.filter(x=>x.ticketId===t.ticketId).reduce((s,x)=>s+((x.items||[]).filter(i=>!i.discount).length),0):0;$('#f-items-btn').textContent=has?('🧾 '+t.items.filter(i=>!i.discount).length+' ítems · ver / editar'):(tk?('🧾 Ticket de '+tk+' ítems'+(t.ticketPart?' (parte '+t.ticketPart[0]+'/'+t.ticketPart[1]+')':'')+' · ver / editar'):'🧾 Agregar detalle de ítems');$('#f-items-btn').onclick=()=>{$('#scrim').classList.remove('on');openTicket({editId:t.id});};}}
   document.querySelectorAll('#paySeg button').forEach(b=>b.classList.toggle('on',b.dataset.p==='once'));
   refreshType();
   const src=t||preset||{};
@@ -62,9 +62,13 @@ $('#dupTx').onclick=()=>{const t=DB.tx.find(x=>x.id===editId);if(!t)return;
 $('#delTx').onclick=()=>{
   if(!editId)return;const t=DB.tx.find(x=>x.id===editId);if(!t){$('#scrim').classList.remove('on');return;}
   const prefix=editId.split('_')[0];
-  const series=DB.tx.filter(x=>x.id!==editId&&x.id.split('_')[0]===prefix);
+  const series=DB.tx.filter(x=>x.id!==editId&&((t.ticketId&&x.ticketId===t.ticketId)||x.id.split('_')[0]===prefix));
   let delIds=[editId];
-  if(t.inst&&series.length){
+  if(t.ticketId&&series.length){
+    if(confirm('Este movimiento es parte de un ticket con '+(series.length+1)+' movimientos (partes por categoría o cuotas). ¿Eliminar el ticket completo?\n\nAceptar = todo el ticket · Cancelar = elegir solo este')){
+      delIds=[editId,...series.map(x=>x.id)];
+    } else if(!confirm('¿Eliminar solo este movimiento?')){return;}
+  } else if(t.inst&&series.length){
     if(confirm('Este movimiento es parte de una serie de cuotas. ¿Eliminar TODA la serie ('+(series.length+1)+' cuotas)?\n\nAceptar = toda la serie · Cancelar = elegir solo esta')){
       delIds=[editId,...series.map(x=>x.id)];
     } else if(!confirm('¿Eliminar solo esta cuota?')){return;}
