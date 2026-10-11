@@ -3,7 +3,8 @@ function renderAccounts(){
   // groups
   const groups={};DB.accounts.forEach(a=>{const g=TYPE_GROUP[a.type]||'Otras';(groups[g]=groups[g]||[]).push(a);});
   let capA=0,debtA=0,hidA=0;
-  DB.accounts.forEach(a=>{const raw=a.type==='Tarjetas de crédito'?-cardSaldos(a.name).aPagar:liveBalance(a.name);const b=toARS(raw,a.currency);if(b==null)return;if(a.includeInTotal===false){hidA+=b;return;}if(b>=0)capA+=b;else debtA+=b;});
+  let loanA=0;DB.accounts.forEach(a=>{const raw=a.type==='Tarjetas de crédito'?-cardSaldos(a.name).aPagar:liveBalance(a.name);const b=toARS(raw,a.currency);if(b==null)return;if(a.includeInTotal===false){hidA+=b;return;}if(a.type==='Préstamo'){loanA+=b;return;}if(b>=0)capA+=b;else debtA+=b;});
+  {const lw=$('#a-loan-wrap');if(lw){if(loanA<0){lw.classList.remove('hidden');$('#a-loan').textContent=money(Math.abs(loanA));}else lw.classList.add('hidden');}}
   debtA-=remDebtARS(MESACTUAL);
   $('#a-cap').textContent=money(capA);$('#a-debt').textContent=money(Math.abs(debtA));$('#a-bal').textContent=money(capA+debtA);$('#a-bal').className='big '+sgn(capA+debtA);
   const hw=$('#a-hidden-wrap');if(hidA!==0){hw.classList.remove('hidden');$('#a-hidden').textContent=money(hidA);$('#a-hidden').className=sgn(hidA);}else hw.classList.add('hidden');

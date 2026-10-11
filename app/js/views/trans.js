@@ -10,13 +10,13 @@ function renderDiario(){
     const mtx=DB.tx.filter(t=>ymOf(t.date)===ym(cur));
     mtx.forEach(t=>{if(!isARS(t))return;
       if(t.type==='income'&&!t.pending&&!isCard(t.account))inc+=t.amount;
+      else if(t.type==='transfer'&&isLoanAcct(t.from)&&!isLoanAcct(t.to))inc+=(t.amountTo!=null?t.amountTo:t.amount); // préstamo recibido: entra como plata del mes
+      else if(t.type==='transfer'&&isLoanAcct(t.to)&&!isLoanAcct(t.from))exp+=t.amount; // capital de una cuota: sale como gasto del mes
       else if(homeMode==='mes'){ // consumido en el mes: tarjeta + efectivo/débito
         if(t.type==='expense')exp+=t.amount;
       } else { // caja: plata que salió de cuentas: gastos no-tarjeta + pagos de tarjeta + capital de préstamos; entra lo recibido de préstamos
         if(t.type==='expense'&&!isCard(t.account))exp+=t.amount;
         else if(t.type==='transfer'&&isCard(t.to)&&!isCard(t.from))exp+=t.amount;
-        else if(t.type==='transfer'&&isLoanAcct(t.to)&&!isLoanAcct(t.from))exp+=t.amount;
-        else if(t.type==='transfer'&&isLoanAcct(t.from)&&!isLoanAcct(t.to))inc+=(t.amountTo!=null?t.amountTo:t.amount);
       }});
   }
   let rem=q?0:remDebtARS(ym(cur));

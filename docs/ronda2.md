@@ -10,7 +10,7 @@
 ## Reglas contables nuevas
 
 - Un movimiento `pending` no mueve saldos ni entra en ingresos (Panel, Estadísticas, Trans, financiamiento). Aparece atenuado con "⏳ pendiente" y en Proyección como ingreso esperado (o "reintegro atrasado" si venció). Se confirma desde el movimiento con "Confirmar que lo recibí".
-- Las cuentas `Préstamo` no son caja: recibir un préstamo no es ingreso, es "deuda nueva" en "¿Cómo se financió?" y "+ Préstamos recibidos" en la cascada de caja. La deuda total de Tarjetas suma tarjetas + préstamos.
+- Las cuentas `Préstamo` quedan FUERA de todos los totales (Cuentas muestra el capital por devolver aparte; Panel y Trans no las suman). Criterio de caja para el flujo mensual: el préstamo recibido entra como plata del mes (figura en Ingresos con la aclaración) y cada cuota sale en su mes: el capital como gasto contado y el interés como gasto "Gastos Fijos › Intereses"; las cuotas futuras figuran por el recordatorio. En "¿Cómo se financió?" (modo mes) el préstamo es "deuda nueva". La deuda total de Tarjetas suma tarjetas + préstamos.
 - Registrar una cuota desde el detalle del préstamo crea la transferencia de capital (cuenta de pago → cuenta Préstamo) y el gasto de interés (Gastos Fijos › Intereses), y tilda el recordatorio del mes.
 
 ## Backend

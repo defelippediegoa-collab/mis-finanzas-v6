@@ -14,10 +14,12 @@ function renderPanel(){
     if(t.type==='income'&&!t.pending&&!isCard(t.account)){I+=ars;if(isHid(t.account))aAh+=ars;}
     else if(t.type==='expense'){C+=ars;if(isCard(t.account))compras+=ars;else if(isHid(t.account))deAh+=ars;}
     else if(t.type==='transfer'){const amtTo=t.amountTo!=null?t.amountTo:t.amount;const vTo=toARS(amtTo,curOf(t.to))||0;
+      if(isLoanAcct(t.from)&&!isLoanAcct(t.to)){I+=vTo;if(isHid(t.to))aAh+=vTo;}      // préstamo recibido: entra como ingreso del mes
+      else if(isLoanAcct(t.to)&&!isLoanAcct(t.from)){C+=ars;if(isHid(t.from))deAh+=ars;} // capital de cuota: sale como gasto contado
       if(isCard(t.to)&&!isCard(t.from)){pagos+=vTo;if(isHid(t.from))deAh+=vTo;}
       if(isHid(t.from)&&isOper(t.to))deAh+=vTo;
       if(isOper(t.from)&&isHid(t.to))aAh+=ars;}});
-  const cash=C-compras;
+  const cash=C-compras;const LFm=loanFlowsARS(m);
   const remPend=remDebtARS(m);
   let venc=0;DB.accounts.forEach(a=>{if(a.type!=='Tarjetas de crédito'||a.includeInTotal===false)return;venc+=toARS(cardSaldos(a.name).aPagar,a.currency)||0;});
   let h='<div class="panelgrid">';
@@ -37,18 +39,17 @@ function renderPanel(){
     if(panelMode==='caja'){
       const esFut=ym(cur)>ym(TODAY);
       let vencM=0;if(esFut)DB.tx.forEach(t=>{if(t.type==='expense'&&isCard(t.account)&&payMonthOf(t)===ym(cur))vencM+=toARS(t.amount,t.currency||'ARS')||0;});
-      const LF=loanFlowsARS(ym(cur));
-      const calc=ini+I+ahNeto+LF.recv-LF.repaid-pagos-cash-vencM;
+      const LF=LFm;
+      const calc=ini+I+ahNeto-pagos-cash-vencM;
       const real=esHoy?capitalNow():null;
       const dif=real!=null?(real-calc):null;
       s='<div class="stcard">';
       s+=stRow('Saldo inicial del mes',(ini>=0?'+':'−'),ini,sgn(ini),esFut?'proyectado con los movimientos ya cargados':'');
-      s+=stRow('Ingresos del mes','+',I,'pos');
-      if(LF.recv>0.5)s+=stRow('Préstamos recibidos','+',LF.recv,'pos','entra plata pero es deuda');if(LF.repaid>0.5)s+=stRow('Capital de préstamos devuelto','−',LF.repaid,'neg');
+      s+=stRow('Ingresos del mes','+',I,'pos',LF.recv>0.5?'incluye préstamo recibido '+money(LF.recv):'');
       s+=stRow('Transferencias con ahorros (neto)',(ahNeto>=0?'+':'−'),ahNeto,ahNeto>=0?'pos':'neg','sacaste '+money(deAh)+' · mandaste '+money(aAh));
       s+=stRow('Pagos a tarjetas (liquidaciones)','−',pagos,'neg');
       if(esFut)s+=stRow('Vencimientos de tarjeta a liquidar','−',vencM,'neg','cuotas y consumos con mes de pago '+monthName(cur).split(' ')[0]);
-      s+=stRow('Gastos del mes (contado)','−',cash,'neg');
+      s+=stRow('Gastos del mes (contado)','−',cash,'neg',LF.repaid>0.5?'incluye capital de préstamo '+money(LF.repaid)+' (+ interés como gasto)':'');
       s+=stTot('BALANCE DE CAJA DEL MES',calc,real!=null?('saldo real hoy: '+money(real)+(Math.abs(dif)>1?' · diferencia '+(dif>=0?'+':'−')+money(Math.abs(dif))+' (tocá Balance de caja en vista tarjetas para conciliar)':' ✓ coincide')):'saldo teórico al cierre del mes');
       s+=stRow('Recordatorios no ejecutados','−',remPend,'warnc');
       s+=stRow('Ingresos proyectados (recordatorios)','+',ingProy,'pos');
@@ -73,7 +74,7 @@ function renderPanel(){
     return;
   }
   if(panelMode==='caja'){
-    const LF=loanFlowsARS(ym(cur));const salidas=cash+pagos+LF.repaid;const bal=I+LF.recv-salidas;const balCon=bal+deAh-aAh;
+    const LF=LFm;const salidas=cash+pagos;const bal=I-salidas;const balCon=bal+deAh-aAh;
     let subSaldo='disponible en tus cuentas';
     if(ym(cur)===ym(TODAY)){
       const D=new Date(cur.getFullYear(),cur.getMonth(),1);let ini=0;
@@ -87,14 +88,14 @@ function renderPanel(){
     h+=pcard('pc-green','📈','INGRESOS DEL MES',money(I),'pos',subIng,'pdIng');
     h+=pcard('pc-red','📉','GASTOS DEL MES',money(cash),'neg','en efectivo / cuentas','pdGasCash');
     h+=pcard('pc-blue','💳','PAGADO DE TARJETA',money(pagos),'','vencimientos que ya pagaste','pdPag');
-    if(LF.recv>0.5||LF.repaid>0.5)h+=pcard('pc-blue','🏦','PRÉSTAMOS',(LF.recv-LF.repaid>=0?'+':'−')+money(Math.abs(LF.recv-LF.repaid)),sgn(LF.recv-LF.repaid),(LF.recv>0.5?'recibido '+money(LF.recv):'')+(LF.recv>0.5&&LF.repaid>0.5?' · ':'')+(LF.repaid>0.5?'capital devuelto '+money(LF.repaid):''),'pdLoan');
+    if(LF.recv>0.5||LF.repaid>0.5)h+=pcard('pc-blue','🏦','PRÉSTAMOS',(LF.recv-LF.repaid>=0?'+':'−')+money(Math.abs(LF.recv-LF.repaid)),sgn(LF.recv-LF.repaid),(LF.recv>0.5?'recibido '+money(LF.recv)+' (ya está en Ingresos)':'')+(LF.recv>0.5&&LF.repaid>0.5?' · ':'')+(LF.repaid>0.5?'capital devuelto '+money(LF.repaid)+' (ya está en Gastos)':''),'pdLoan');
     h+=pcard('pc-amber','⏰','RECORDATORIOS PEND.',money(remPend),'','del mes, sin tildar','pdRem');
     h+=pcard(bal>=0?'pc-green':'pc-red','🧮','BALANCE DE CAJA',money(bal),sgn(bal),((deAh>0||aAh>0)?('con mov. de ahorros: <b class="'+sgn(balCon)+'">'+(balCon>=0?'+':'−')+money(Math.abs(balCon))+'</b> en tus cuentas'):'ingresos − salidas del mes')+' · tocá para conciliar','cajaBalCard');
   } else {
     const bal=I-C-remPend;
     h+=pcard(bal>=0?'pc-green':'pc-red','🧮','BALANCE DEL MES',money(bal),sgn(bal),'ingresos − gastos − record. pend.','pdBalMes');
-    h+=pcard('pc-green','📈','INGRESOS DEL MES',money(I),'pos','','pdIng');
-    h+=pcard('pc-red','📉','GASTOS DEL MES',money(C),'neg','💳 '+money(compras)+' · 💵 '+money(cash),'pdGasTodo');
+    h+=pcard('pc-green','📈','INGRESOS DEL MES',money(I),'pos',LFm.recv>0.5?'🏦 incluye préstamo recibido '+money(LFm.recv):'','pdIng');
+    h+=pcard('pc-red','📉','GASTOS DEL MES',money(C),'neg','💳 '+money(compras)+' · 💵 '+money(cash)+(LFm.repaid>0.5?' · 🏦 cuota '+money(LFm.repaid):''),'pdGasTodo');
     h+=pcard('pc-blue','💳','CONSUMO TARJETA',money(compras),'','de este mes, se paga después','pdComp');
     h+=pcard('pc-amber','📅','VENCIDO HOY',money(venc),'','tarjetas por pagar (neteado)','pdVenc');
     h+=pcard('pc-amber','⏰','RECORDATORIOS PEND.',money(remPend),'','del mes, sin tildar','pdRem');
@@ -183,11 +184,13 @@ function openCajaConcil(){
     if(t.type==='income'&&!t.pending&&!isCard(t.account)){I+=ars;if(isHidN(t.account)){iOc+=ars;iOcRows.push(t);aAh+=ars;}}
     else if(t.type==='expense'&&!isCard(t.account)){cash+=ars;if(isHidN(t.account)){gOc+=ars;gOcRows.push(t);deAh+=ars;}}
     else if(t.type==='transfer'){const amtTo=t.amountTo!=null?t.amountTo:t.amount;const vTo=toARS(amtTo,curOf(t.to))||0;
+      if(isLoanAcct(t.from)&&!isLoanAcct(t.to)){I+=vTo;if(isHidN(t.to))aAh+=vTo;}
+      else if(isLoanAcct(t.to)&&!isLoanAcct(t.from)){cash+=ars;if(isHidN(t.from))deAh+=ars;}
       if(isCard(t.to)&&!isCard(t.from)){pagos+=vTo;if(isHidN(t.from))deAh+=vTo;}
       if(isHidN(t.from)&&isOperN(t.to))deAh+=vTo;
       if(isOperN(t.from)&&isHidN(t.to))aAh+=ars;
       if((curOf(t.from)||'ARS')!==(curOf(t.to)||'ARS'))fxN.push(t);}});
-  const balCon=I+LF.recv-cash-pagos-LF.repaid+deAh-aAh;
+  const balCon=I-cash-pagos+deAh-aAh;
   let h='';
   if(ym(cur)!==ym(TODAY)){
     h='<div class="finhead" style="border-top:none">La conciliación por saldos solo está disponible para el mes en curso.</div>';
