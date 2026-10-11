@@ -15,7 +15,7 @@ function renderProductsList(){
   if(!prods.length){h+='<div class="empty" style="padding:24px 18px">'+(q?'Nada con "'+esc(prodQuery)+'".':'Todavía no hay productos. Se crean desde los ítems de un ticket (tocá "¿producto?") o con "vincular".')+'</div>';}
   [...kinds.values()].sort((a,b)=>a.label.localeCompare(b.label,'es')).forEach(k=>{
     h+='<div class="pj-sec pkind" data-key="'+esc(k.key)+'"><span>'+esc(k.label)+' <small style="color:var(--muted2)">· '+k.products.length+'</small></span>'+(k.products.length>1?'<small class="pkcmp">comparar ›</small>':'')+'</div><div class="catlist">';
-    k.products.sort((a,b)=>a.name.localeCompare(b.name,'es')).forEach(p=>{const li=prodLastInfo(p);
+    k.products.sort((a,b)=>(a.variety||'').localeCompare(b.variety||'','es')||a.name.localeCompare(b.name,'es')).forEach(p=>{const li=prodLastInfo(p);
       h+='<div class="prow" data-id="'+esc(p.id)+'"><div class="pri"><div class="prn">'+esc(p.name)+'</div><div class="prs">'+esc([p.variety,p.brand,p.size].filter(Boolean).join(' · ')||'sin marca')+(li?' · '+li.st.length+' comercio'+(li.st.length>1?'s':''):'')+'</div></div>'+
         (li?'<div class="prp"><b>'+(li.last.usd?'US$ '+li.last.raw:fmtP(li.last.price))+'</b><small>'+esc(li.last.merchant)+' · '+li.last.date.slice(5)+(li.trend!=null&&Math.abs(li.trend)>=0.005?' <span class="'+(li.trend>0?'neg':'pos')+'">'+(li.trend>0?'▲':'▼')+Math.abs(li.trend*100).toFixed(0)+'%</span>':'')+'</small></div>':'<div class="prp"><small>sin compras</small></div>')+'</div>';});
     h+='</div>';});
@@ -76,19 +76,25 @@ function openProductDetail(pid){const p=resolveProduct(pid);if(!p){toast('Produc
 }
 
 // ---- comparación por tipo (mismo genérico, distintas marcas) ----
-function openKindDetail(key){const k=kindsIndex().get(key);if(!k)return;const basis=CFG.priceBasis||'paid';const cmp=kindComparison(key,basis);
-  const sp=kindSpendByMonth(key);const mNow=ym(cur);let h='<div class="debtlist">';
-  h+='<div class="debttot" style="padding:10px 16px;border-top:none"><span>Gastado en '+esc(k.kind)+' · '+monthName(cur)+'</span><span class="neg">'+money(sp[mNow]||0)+'</span></div>';
+function openKindDetail(key,variety){const k=kindsIndex().get(key);if(!k)return;const basis=CFG.priceBasis||'paid';const cmp=kindComparison(key,basis,variety);
+  const vLabel=variety!=null?((k.products.find(p=>varKey(p)===variety)||{}).variety||'(sin variedad)'):null;
+  const sp=kindSpendByMonth(key,variety);const mNow=ym(cur);let h='<div class="debtlist">';
+  h+='<div class="debttot" style="padding:10px 16px;border-top:none"><span>Gastado en '+esc(k.kind)+(vLabel?' › '+esc(vLabel):'')+' · '+monthName(cur)+'</span><span class="neg">'+money(sp[mNow]||0)+'</span></div>';
   let s6=0,n6=0,mrows='';for(let i=5;i>=0;i--){const d=new Date(cur.getFullYear(),cur.getMonth()-i,1);const mm=ym(d);const v=sp[mm]||0;if(v>0){s6+=v;n6++;}mrows+='<div class="finrow"><span style="text-transform:capitalize">'+d.toLocaleDateString('es-AR',{month:'long'})+'</span><span class="'+(v>0?'neg':'')+'" style="'+(v>0?'':'color:var(--muted2)')+'">'+(v>0?money(v):'—')+'</span></div>';}
   const tot=Object.values(sp).reduce((a,b)=>a+b,0);
   h+='<div class="finhead">Últimos 6 meses · promedio '+money(n6?s6/n6:0)+'/mes · total histórico '+money(tot)+'</div>'+mrows;
-  h+='<div class="finhead">Por marca · precio '+(basis==='list'?'de lista':'pagado')+' normalizado</div>';
-  cmp.forEach((c,i)=>{h+='<div class="debtrow" data-id="'+esc(c.p.id)+'"><div class="dinfo"><div class="dn">'+(i===0&&c.norm?'✓ ':'')+esc(c.p.name)+'</div><div class="ds">'+esc([c.p.variety,c.p.brand,c.p.size].filter(Boolean).join(' · ')||'sin marca')+(c.best?' · '+esc(c.best.merchant)+' '+c.best.lastDate.slice(5):'')+'</div></div><div class="damt">'+(c.norm?fmtP(c.norm.v)+'<small style="display:block;color:var(--muted2);font-weight:400">por '+c.norm.u+'</small>':(c.best?fmtP(c.best.last)+'<small style="display:block;color:var(--muted2);font-weight:400">(sin tamaño)</small>':'<small>sin compras</small>'))+'</div></div>';});
+  if(variety==null){const vs=kindSpendByVariety(key,mNow);if(vs.length){h+='<div class="finhead">Por variedad · '+monthName(cur)+'</div>';const vmax=vs[0].v;
+      vs.forEach(x=>{h+='<div class="catrow" data-var="'+esc(x.variety)+'" style="padding:8px 16px"><div class="crtop"><span>'+esc(x.label)+' <small style="color:var(--muted2)">×'+x.n+'</small> ›</span><b class="neg">'+money(x.v)+'</b></div><div class="crbar"><i style="width:'+Math.round(x.v/vmax*100)+'%"></i></div></div>';});}}
+  h+='<div class="finhead">'+(variety!=null?'Por marca':'Productos')+' · precio '+(basis==='list'?'de lista':'pagado')+' normalizado'+(variety==null&&cmp.length>1?' <small style="font-weight:400;color:var(--muted)">(compará dentro de una variedad)</small>':'')+'</div>';
+  let lastVar=null;
+  cmp.forEach((c,i)=>{if(variety==null){const vk=varKey(c.p);if(vk!==lastVar){lastVar=vk;h+='<div class="ds" style="padding:8px 16px 2px;color:var(--accent);font-size:12px">'+esc(c.p.variety||'(sin variedad)')+'</div>';}}
+    h+='<div class="debtrow" data-id="'+esc(c.p.id)+'"><div class="dinfo"><div class="dn">'+(i===0&&c.norm?'✓ ':'')+esc(c.p.name)+'</div><div class="ds">'+esc([c.p.variety,c.p.brand,c.p.size].filter(Boolean).join(' · ')||'sin marca')+(c.best?' · '+esc(c.best.merchant)+' '+c.best.lastDate.slice(5):'')+'</div></div><div class="damt">'+(c.norm?fmtP(c.norm.v)+'<small style="display:block;color:var(--muted2);font-weight:400">por '+c.norm.u+'</small>':(c.best?fmtP(c.best.last)+'<small style="display:block;color:var(--muted2);font-weight:400">(sin tamaño)</small>':'<small>sin compras</small>'))+'</div></div>';});
   const series=cmp.filter(c=>c.stores.length).map((c,i)=>({name:c.p.brand||c.p.name,color:cssv(PALETTE[i%PALETTE.length]),pts:productPriceRows(c.p.id,basis).filter(r=>r.price>0).map(r=>({x:Date.parse(r.date+'T12:00:00'),y:r.price}))})).filter(s=>s.pts.length);
-  if(series.length)h+='<div class="finhead">Evolución por marca (precio por '+esc(k.products[0].unit||'u')+')</div><div style="padding:6px 10px">'+multiLineSVG(series)+'</div>';
+  if(variety!=null&&series.length)h+='<div class="finhead">Evolución por marca (precio por '+esc(cmp[0].p.unit||'u')+')</div><div style="padding:6px 10px">'+multiLineSVG(series)+'</div>';
   h+='<div style="padding:10px 16px"><button class="editbtn" id="kdRename" style="margin:0;width:100%">Renombrar tipo</button></div></div>';
-  $('#cardDetTitle').textContent=k.kind;$('#cardDetBody').innerHTML=h;$('#cardDetScrim').classList.add('on');
+  $('#cardDetTitle').textContent=k.kind+(vLabel?' › '+vLabel:'');$('#cardDetBody').innerHTML=h;$('#cardDetScrim').classList.add('on');
   $('#cardDetBody').querySelectorAll('.debtrow[data-id]').forEach(el=>el.onclick=()=>openProductDetail(el.dataset.id));
+  $('#cardDetBody').querySelectorAll('.catrow[data-var]').forEach(el=>el.onclick=()=>openKindDetail(key,el.dataset.var));
   $('#kdRename').onclick=()=>{const kind=prompt('Nuevo nombre del tipo (se aplica a sus '+k.products.length+' productos)',k.kind);if(kind===null||!kind.trim())return;renameKind(key,{kind});$('#cardDetScrim').classList.remove('on');renderProductsList();};
 }
 
@@ -120,8 +126,8 @@ function ppRender(){if(!_pp)return;const o=_pp.opts;const q=$('#ppSearch').value
   $('#ppList').innerHTML=h;$('#ppList').querySelectorAll('.prow').forEach(r=>r.onclick=()=>ppPick(r.dataset.id));}
 function ppPick(pid){const o=_pp.opts;const also=[];if(o.alsoCandidates){o.alsoCandidates.forEach(c=>{const p=productById(pid);if(p&&scoreDesc(c.desc,p)>=0.75)also.push(c.key);});}ppDone({productId:pid,alsoKeys:also});}
 $('#ppSearch').oninput=ppRender;
-$('#ppCreateBtn').onclick=()=>{const o=_pp.opts;const f=$('#ppCreate');f.classList.remove('hidden');const d=o.desc||$('#ppSearch').value;const mk=matchKind(d);const T=pTokens(d);
-  $('#pp-name').value=o.newDefaults&&o.newDefaults.name||ppTitleCase(d);$('#pp-kind').value=o.newDefaults&&o.newDefaults.kind||(mk?mk.kind:'');$('#pp-variety').value=o.newDefaults&&o.newDefaults.variety||(mk?mk.variety:'');$('#pp-brand').value=o.newDefaults&&o.newDefaults.brand||'';
+$('#ppCreateBtn').onclick=()=>{const o=_pp.opts;const f=$('#ppCreate');f.classList.remove('hidden');const d=o.desc||$('#ppSearch').value;const mk=suggestTaxonomy(d);const T=pTokens(d);
+  $('#pp-name').value=o.newDefaults&&o.newDefaults.name||ppTitleCase(d);$('#pp-kind').value=o.newDefaults&&o.newDefaults.kind||mk.kind;$('#pp-variety').value=o.newDefaults&&o.newDefaults.variety||mk.variety;$('#pp-brand').value=o.newDefaults&&o.newDefaults.brand||'';
   $('#pp-size').value=o.newDefaults&&o.newDefaults.size||(T.size?(T.size.u==='g'?(T.size.n>=1000?(T.size.n/1000)+' kg':T.size.n+' g'):(T.size.n>=1000?(T.size.n/1000)+' l':T.size.n+' ml'))+(T.pack?' x'+T.pack:''):(T.pack?'x'+T.pack:''));
   $('#pp-unit').value=o.newDefaults&&o.newDefaults.unit||o.unit||'u';
   $('#pp-kinds').innerHTML=[...kindsIndex().values()].map(k=>'<option value="'+esc(k.kind)+'">').join('');$('#pp-brands').innerHTML=[...new Set(activeProducts().map(p=>p.brand).filter(Boolean))].sort().map(b=>'<option value="'+esc(b)+'">').join('');

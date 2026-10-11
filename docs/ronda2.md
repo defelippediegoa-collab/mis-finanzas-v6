@@ -4,7 +4,7 @@
 
 - **Ítem de ticket**: `listPrice` (precio impreso), `unitPrice` (neto, lo que pagaste por unidad después de repartir descuentos), `discountAlloc`, `pos`, `category`/`sub` (solo si difiere del ticket), `productId`.
 - **Movimiento**: `ticketPart:[k,K]` cuando el ticket se guardó en varias categorías; `discounts[]` en la parte principal; `pending:true` + `refundOf` en un ingreso de reintegro todavía no recibido; `refund:{pct,amount,account,due}` en el gasto; `loanId`/`loanCuota` en los movimientos de un préstamo.
-- **`DB.products[]`**: catálogo. `kind` (genérico, sin marca) + `variety` → producto con `brand`, `size`, `unit` → `aliases[]` (descripciones normalizadas vistas en tickets). El alias manda: `normalize()` re-deriva `productId` desde el alias, así los datos viejos y otros dispositivos quedan vinculados solos. Fusionar deja `mergedInto`.
+- **`DB.products[]`**: catálogo. `kind` = RUBRO en el que se agrupa el gasto (comida, galletitas, limpieza, higiene…) → `variety` = qué producto es (queso cremoso, puré de tomate…) → producto con `brand`, `size`, `unit` → `aliases[]` (descripciones normalizadas vistas en tickets). El alias manda: `normalize()` re-deriva `productId` desde el alias, así los datos viejos y otros dispositivos quedan vinculados solos. Fusionar deja `mergedInto`.
 - **`DB.loans[]`**: préstamos recibidos. Cada uno tiene una cuenta tipo `Préstamo` (saldo negativo = capital que falta), una transferencia de entrada y un recordatorio mensual de cuotas (`kind:'loan'`).
 
 ## Reglas contables nuevas

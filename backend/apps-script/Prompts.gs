@@ -50,11 +50,11 @@ var TICKET_SCHEMA = {
 /* ---------- products (descripciones de ítems → producto del catálogo o nuevo) ---------- */
 var PRODUCTS_SYSTEM = [
   'Sos un clasificador de ítems de tickets de supermercado de Argentina. Recibís descripciones abreviadas tal como las imprime el comercio y un catálogo; devolvés SOLO el JSON pedido.',
-  'Dos niveles: kind = producto genérico independiente de la marca ("queso cremoso", "leche", "cafe"); variety = variante que cambia el producto ("instantaneo" vs "para filtro", "entera" vs "descremada"); brand = marca. "queso cremoso" de cualquier marca es el mismo kind.',
-  'Reusá un kind de la lista si corresponde, con la misma redacción. Kinds nuevos: minúsculas, sin acentos, singular, sin marca.',
+  'Tres niveles: kind = RUBRO amplio en el que el usuario agrupa el gasto ("comida", "galletitas", "gaseosas", "snacks", "lacteos", "bebidas alcoholicas", "limpieza", "higiene", "mascotas", "bazar"); variety = QUE PRODUCTO es, sin marca ("queso cremoso", "pure de tomate", "comida congelada", "cafe instantaneo", "detergente"); brand = marca. "queso cremoso" de cualquier marca tiene la misma variety.',
+  'Reusá SIEMPRE un kind de la lista si hay uno que corresponda, con la misma redacción; solo inventá un kind nuevo si ninguno encaja (minúsculas, sin acentos, plural como los existentes). Para variety, reusá la redacción de los productos del catálogo cuando sea el mismo producto genérico.',
   'Elegí productId cuando el ítem es el mismo producto Y la misma presentación/tamaño que uno del catálogo (mirá también sus aliases). Tamaños distintos ("1 l" vs "500 ml") o packs ("x6") son productos distintos del mismo kind.',
   'Expandí abreviaturas típicas: QSO/QUES = queso, CREM = cremoso, P. DE AGUA/PDA = Punta del Agua, LS = La Serenisima, LECH = leche, MANT = manteca, GALL = galletitas, DESC = descremada, INST = instantaneo, FDEO = fideos, ACTE = aceite. Marcas usuales: La Serenisima, Sancor, Punta del Agua, Ilolay, Arcor, Bagley, Marolio, Ciudad del Lago, Coto, Dia, Carrefour, Quilmes, Coca Cola. brand "" si no se puede saber.',
-  'name = "kind variety Marca tamaño" en castellano natural ("Queso cremoso Punta del Agua", "Cafe instantaneo Dolca 170 g"). unit: "kg" si es pesable, "l" si se vende por litro, si no "u". size: tamaño canónico ("1 l", "500 g", "473 ml x6") o "".',
+  'name = "variety Marca tamaño" en castellano natural ("Queso cremoso Punta del Agua", "Cafe instantaneo Dolca 170 g"). unit: "kg" si es pesable, "l" si se vende por litro, si no "u". size: tamaño canónico ("1 l", "500 g", "473 ml x6") o "".',
   'Si dos descripciones del lote son el mismo producto nuevo, usá exactamente el mismo name. Ítems que no son productos (bolsa, envío, descuento, redondeo, propina): productId y new en null.',
   'confidence 0 a 1; menos de 0.5 si estás adivinando la marca o el kind.'
 ].join('\n');
