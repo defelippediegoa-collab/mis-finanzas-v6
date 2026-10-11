@@ -12,9 +12,11 @@ function renderDiario(){
       if(t.type==='income'&&!t.pending&&!isCard(t.account))inc+=t.amount;
       else if(homeMode==='mes'){ // consumido en el mes: tarjeta + efectivo/débito
         if(t.type==='expense')exp+=t.amount;
-      } else { // caja: plata que salió de cuentas: gastos no-tarjeta + pagos de tarjeta
+      } else { // caja: plata que salió de cuentas: gastos no-tarjeta + pagos de tarjeta + capital de préstamos; entra lo recibido de préstamos
         if(t.type==='expense'&&!isCard(t.account))exp+=t.amount;
         else if(t.type==='transfer'&&isCard(t.to)&&!isCard(t.from))exp+=t.amount;
+        else if(t.type==='transfer'&&isLoanAcct(t.to)&&!isLoanAcct(t.from))exp+=t.amount;
+        else if(t.type==='transfer'&&isLoanAcct(t.from)&&!isLoanAcct(t.to))inc+=(t.amountTo!=null?t.amountTo:t.amount);
       }});
   }
   let rem=q?0:remDebtARS(ym(cur));
@@ -57,19 +59,18 @@ function renderDiario(){
       return '<div class="finrow"><span>'+ico+' '+lbl+'</span><span class="'+(v>0?'neg':'pos')+'">'+(v>0?'+':'−')+money(Math.abs(v))+' <small>'+(v>0?posTxt:negTxt)+'</small></span></div>';};
     if(homeMode==='caja'){
       // CAJA: salidas reales = gastos cash + pagos de tarjeta. La deuda nueva no mueve caja.
-      const salidas=(C2-compras)+pagos;res=I2-salidas;
-      const cajaC=(salidas-I2)-ahorro-prest;
-      const ctx='<div style="padding:2px 16px 4px;font-size:11px;color:var(--muted2)">💳 Además compraste con tarjeta '+money(compras)+' que todavía no salió de caja (deuda a pagar después).</div>';
+      const salidas=(C2-compras)+pagos+LF.repaid;res=I2+LF.recv-salidas;
+      const cajaC=(salidas-I2-LF.recv)-ahorro;
+      const ctx=(compras>0.5?'<div style="padding:2px 16px 4px;font-size:11px;color:var(--muted2)">💳 Además compraste con tarjeta '+money(compras)+' que todavía no salió de caja (deuda a pagar después).</div>':'')+
+        (LF.recv>0.5||LF.repaid>0.5?'<div style="padding:2px 16px 4px;font-size:11px;color:var(--muted2)">🏦 '+(LF.recv>0.5?'Entró un préstamo de '+money(LF.recv)+' (cuenta como plata de caja; la deuda se paga por cuotas). ':'')+(LF.repaid>0.5?'Devolviste '+money(LF.repaid)+' de capital (contado como salida).':'')+'</div>':'');
       if(res<-0.5){
         inner='<div class="finhead">Salió <b class="neg">'+money(-res)+'</b> más de lo que ingresó. Se cubrió con:</div>'+
-          row('🏦','Préstamos',prest,'recibiste un préstamo','devolviste capital')+
           row('🐷','Ahorros',ahorro,'sacaste de ahorros','mandaste a ahorros')+
-          row('💰','Caja acumulada',cajaC,'bajó la plata de tus cuentas','subió la plata de tus cuentas')+(compras>0.5?ctx:'');
+          row('💰','Caja acumulada',cajaC,'bajó la plata de tus cuentas','subió la plata de tus cuentas')+ctx;
       } else {
         inner='<div class="finhead">Ingresó <b class="pos">'+money(res)+'</b> más de lo que salió. Destino:</div>'+
-          row('🏦','Préstamos',prest,'recibiste un préstamo','devolviste capital')+
           row('🐷','Ahorros',ahorro,'sacaste de ahorros','mandaste a ahorros')+
-          row('💰','Caja acumulada',cajaC,'bajó la plata de tus cuentas','subió la plata de tus cuentas')+(compras>0.5?ctx:'');
+          row('💰','Caja acumulada',cajaC,'bajó la plata de tus cuentas','subió la plata de tus cuentas')+ctx;
       }
     } else {
       res=I2-C2;const caja=(C2-I2)-deuda-ahorro;

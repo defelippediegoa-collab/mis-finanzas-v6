@@ -101,7 +101,7 @@ function renderCardsView(){  const cards=DB.accounts.filter(a=>a.type==='Tarjeta
     h+='<div class="cardtblwrap"><table class="cardtbl">'+chead+crows+ctot+'</table></div>';
   }
   $('#cardsBody').innerHTML=h;bindLoansSection();
-  document.querySelectorAll('#cardsBody .catrow').forEach(el=>el.onclick=()=>openCardCatDetail(el.dataset.cat));
+  document.querySelectorAll('#cardsBody .catrow:not([data-loan])').forEach(el=>el.onclick=()=>openCardCatDetail(el.dataset.cat));
   document.querySelectorAll('#cardsBody .cardtbl td.tap').forEach(td=>td.onclick=()=>openCardMonthDetail(td.dataset.acc,td.dataset.m,+td.dataset.i,td.dataset.lab));
 }
 function stripInst(s){return (s||'').replace(/\s*\(\d+\/\d+\)\s*/g,' ').replace(/\s+/g,' ').trim();}
