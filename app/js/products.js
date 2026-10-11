@@ -100,4 +100,6 @@ function productStoreSummary(pid,basis){const rows=productPriceRows(pid,basis).f
 // Precio normalizado por kg / l / u a partir de size y pack
 function normalizedPrice(p,price){if(!(price>0))return null;const T=pTokens((p.size||'')+' '+(p.name||''));const pack=T.pack||1;if(T.size){const per=price/pack;if(T.size.u==='g')return{v:per/T.size.n*1000,u:'kg'};if(T.size.u==='ml')return{v:per/T.size.n*1000,u:'l'};}
   if(p.unit==='kg')return{v:price,u:'kg'};if(p.unit==='l')return{v:price,u:'l'};if(pack>1)return{v:price/pack,u:'u'};return null;}
+// Gasto (ARS) por mes de un tipo: {month:total}
+function kindSpendByMonth(key){const by={};forEachItem((i,t)=>{if(i.discount||!(i.amount>0)||!i.productId)return;const p=productById(i.productId);if(!p||kindKey(p)!==key)return;const m=ymOf(t.date);by[m]=(by[m]||0)+(toARS(i.amount,t.currency||'ARS')||0);});return by;}
 function kindComparison(key,basis){const k=kindsIndex().get(key);if(!k)return [];return k.products.map(p=>{const st=productStoreSummary(p.id,basis);const best=st[0]||null;const np=best?normalizedPrice(p,best.last):null;return{p,best,norm:np,stores:st};}).sort((a,b)=>{if(a.norm&&b.norm)return a.norm.v-b.norm.v;if(a.norm)return -1;if(b.norm)return 1;return (a.best?a.best.last:1e18)-(b.best?b.best.last:1e18);});}

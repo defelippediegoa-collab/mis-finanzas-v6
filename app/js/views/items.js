@@ -1,18 +1,21 @@
 /* ---------- ÍTEMS: cuánto gasto por producto (desde tickets) ---------- */
-let itemsShowAll=false;
-function itemRowsAll(){const out=[];DB.tx.forEach(t=>{if(t.type!=='expense'||!Array.isArray(t.items))return;t.items.forEach(i=>{if(i.discount||!(i.amount>0))return;const p=i.productId?productById(i.productId):null;out.push({t,i,key:p?('p:'+p.id):(i.key||normKey(i.desc)),desc:p?p.name:i.desc,ars:toARS(i.amount,t.currency||'ARS')||0});});});return out;}
+let itemsShowAll=false;let itemsMode=localStorage.getItem('fin_items_mode')||'product';
+function itemRowsAll(){const out=[];DB.tx.forEach(t=>{if(t.type!=='expense'||!Array.isArray(t.items))return;t.items.forEach(i=>{if(i.discount||!(i.amount>0))return;const p=i.productId?productById(i.productId):null;const kk=p&&p.kind?kindKey(p):'';out.push({t,i,key:p?('p:'+p.id):(i.key||normKey(i.desc)),desc:p?p.name:i.desc,tkey:kk?('t:'+kk):(p?'t:(sin tipo)':(i.key||normKey(i.desc))),tdesc:kk?p.kind:(p?'(sin tipo)':i.desc),ars:toARS(i.amount,t.currency||'ARS')||0});});});return out;}
 function renderItemStats(){
   const m=ym(cur);const by={};
-  itemRowsAll().forEach(r=>{if(ymOf(r.t.date)!==m)return;const o=by[r.key]||(by[r.key]={key:r.key,desc:r.desc,v:0,n:0});o.v+=r.ars;o.n++;});
+  const byKind=itemsMode==='kind';
+  itemRowsAll().forEach(r=>{if(ymOf(r.t.date)!==m)return;const k=byKind?r.tkey:r.key,d=byKind?r.tdesc:r.desc;const o=by[k]||(by[k]={key:k,desc:d,v:0,n:0});o.v+=r.ars;o.n++;});
   const rows=Object.values(by).sort((a,b)=>b.v-a.v);
   const el=$('#st-items');if(!el)return;
   if(!rows.length){el.innerHTML='';return;}
   const max=rows[0].v,tot=rows.reduce((s,r)=>s+r.v,0);const show=itemsShowAll?rows:rows.slice(0,10);
-  let h='<div class="pj-sec"><span>🧾 Ítems del mes <small style="color:var(--muted2)">· '+rows.length+' productos · '+money(tot)+'</small></span><small><a href="#" id="itemsProducts">productos y precios ›</a></small></div><div class="catlist" style="margin-bottom:14px">';
+  let h='<div class="pj-sec"><span>🧾 Ítems del mes <small style="color:var(--muted2)">· '+rows.length+(byKind?' tipos':' productos')+' · '+money(tot)+'</small></span><small><a href="#" id="itemsProducts">productos y precios ›</a></small></div>'+
+    '<div class="txfilter" style="padding:0 16px 8px"><button class="tf'+(byKind?'':' on')+'" id="imProd">Por producto</button><button class="tf'+(byKind?' on':'')+'" id="imKind">Por tipo</button></div><div class="catlist" style="margin-bottom:14px">';
   show.forEach(r=>{h+='<div class="catrow" data-key="'+esc(r.key)+'"><div class="crtop"><span>'+esc(r.desc)+(r.n>1?' <small style="color:var(--muted2)">×'+r.n+'</small>':'')+' ›</span><b class="neg">'+money(r.v)+'</b></div><div class="crbar"><i style="width:'+Math.round(r.v/max*100)+'%"></i></div></div>';});
   if(rows.length>10)h+='<div class="hint" style="text-align:center;padding:6px"><a href="#" id="itemsMore">'+(itemsShowAll?'ver menos':'ver los '+rows.length)+'</a></div>';
   h+='</div>';el.innerHTML=h;
-  el.querySelectorAll('.catrow').forEach(x=>x.onclick=()=>{const k=x.dataset.key;if(k.startsWith('p:'))openProductDetail(k.slice(2));else openItemDetail(k);});
+  el.querySelectorAll('.catrow').forEach(x=>x.onclick=()=>{const k=x.dataset.key;if(k.startsWith('p:'))openProductDetail(k.slice(2));else if(k.startsWith('t:'))openKindDetail(k.slice(2));else openItemDetail(k);});
+  $('#imProd').onclick=()=>{itemsMode='product';localStorage.setItem('fin_items_mode','product');renderItemStats();};$('#imKind').onclick=()=>{itemsMode='kind';localStorage.setItem('fin_items_mode','kind');renderItemStats();};
   const ip=$('#itemsProducts');if(ip)ip.onclick=e=>{e.preventDefault();openProductsView();};
   const more=$('#itemsMore');if(more)more.onclick=e=>{e.preventDefault();itemsShowAll=!itemsShowAll;renderItemStats();};
 }

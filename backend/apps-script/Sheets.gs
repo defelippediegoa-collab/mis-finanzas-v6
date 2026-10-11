@@ -29,13 +29,14 @@ function writeSheets(db) {
   var ms = tab(doc, 'Movimientos', mh);
   if (mrows.length) ms.getRange(2, 1, mrows.length, mh.length).setValues(mrows);
 
-  var ih = ['Fecha', 'Comercio', 'Item', 'Producto', 'Cantidad', 'Unidad', 'PrecioLista', 'PrecioPagado', 'Descuento', 'Importe', 'Categoria', 'Subcategoria', 'Cuenta', 'TxId'];
+  var ih = ['Fecha', 'Comercio', 'Item', 'Producto', 'Tipo', 'Variedad', 'Marca', 'Cantidad', 'Unidad', 'PrecioLista', 'PrecioPagado', 'Descuento', 'Importe', 'Categoria', 'Subcategoria', 'Cuenta', 'TxId'];
   var pById = {};(db.products || []).forEach(function (p) { pById[p.id] = p; });
   var irows = [];
   tx.forEach(function (t) {
     (t.items || []).forEach(function (i) {
-      var pr = i.productId && pById[i.productId] ? pById[i.productId].name : '';
-      irows.push([t.date || '', t.merchant || '', i.desc || '', pr, Number(i.qty) || 1, i.unit || 'u', i.listPrice == null ? (i.unitPrice == null ? '' : Number(i.unitPrice)) : Number(i.listPrice), i.unitPrice == null ? '' : Number(i.unitPrice), Number(i.discountAlloc) || 0, Number(i.amount) || 0, t.category || '', t.sub || '', t.account || '', t.id || '']);
+      var pp = i.productId && pById[i.productId] ? pById[i.productId] : null;
+      var pr = pp ? pp.name : '';
+      irows.push([t.date || '', t.merchant || '', i.desc || '', pr, pp ? (pp.kind || '') : '', pp ? (pp.variety || '') : '', pp ? (pp.brand || '') : '', Number(i.qty) || 1, i.unit || 'u', i.listPrice == null ? (i.unitPrice == null ? '' : Number(i.unitPrice)) : Number(i.listPrice), i.unitPrice == null ? '' : Number(i.unitPrice), Number(i.discountAlloc) || 0, Number(i.amount) || 0, t.category || '', t.sub || '', t.account || '', t.id || '']);
     });
   });
   var is = tab(doc, 'Items', ih);

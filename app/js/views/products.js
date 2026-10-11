@@ -77,7 +77,12 @@ function openProductDetail(pid){const p=resolveProduct(pid);if(!p){toast('Produc
 
 // ---- comparación por tipo (mismo genérico, distintas marcas) ----
 function openKindDetail(key){const k=kindsIndex().get(key);if(!k)return;const basis=CFG.priceBasis||'paid';const cmp=kindComparison(key,basis);
-  let h='<div class="debtlist"><div class="finhead" style="border-top:none">Por marca · precio '+(basis==='list'?'de lista':'pagado')+' normalizado</div>';
+  const sp=kindSpendByMonth(key);const mNow=ym(cur);let h='<div class="debtlist">';
+  h+='<div class="debttot" style="padding:10px 16px;border-top:none"><span>Gastado en '+esc(k.kind)+' · '+monthName(cur)+'</span><span class="neg">'+money(sp[mNow]||0)+'</span></div>';
+  let s6=0,n6=0,mrows='';for(let i=5;i>=0;i--){const d=new Date(cur.getFullYear(),cur.getMonth()-i,1);const mm=ym(d);const v=sp[mm]||0;if(v>0){s6+=v;n6++;}mrows+='<div class="finrow"><span style="text-transform:capitalize">'+d.toLocaleDateString('es-AR',{month:'long'})+'</span><span class="'+(v>0?'neg':'')+'" style="'+(v>0?'':'color:var(--muted2)')+'">'+(v>0?money(v):'—')+'</span></div>';}
+  const tot=Object.values(sp).reduce((a,b)=>a+b,0);
+  h+='<div class="finhead">Últimos 6 meses · promedio '+money(n6?s6/n6:0)+'/mes · total histórico '+money(tot)+'</div>'+mrows;
+  h+='<div class="finhead">Por marca · precio '+(basis==='list'?'de lista':'pagado')+' normalizado</div>';
   cmp.forEach((c,i)=>{h+='<div class="debtrow" data-id="'+esc(c.p.id)+'"><div class="dinfo"><div class="dn">'+(i===0&&c.norm?'✓ ':'')+esc(c.p.name)+'</div><div class="ds">'+esc([c.p.variety,c.p.brand,c.p.size].filter(Boolean).join(' · ')||'sin marca')+(c.best?' · '+esc(c.best.merchant)+' '+c.best.lastDate.slice(5):'')+'</div></div><div class="damt">'+(c.norm?fmtP(c.norm.v)+'<small style="display:block;color:var(--muted2);font-weight:400">por '+c.norm.u+'</small>':(c.best?fmtP(c.best.last)+'<small style="display:block;color:var(--muted2);font-weight:400">(sin tamaño)</small>':'<small>sin compras</small>'))+'</div></div>';});
   const series=cmp.filter(c=>c.stores.length).map((c,i)=>({name:c.p.brand||c.p.name,color:cssv(PALETTE[i%PALETTE.length]),pts:productPriceRows(c.p.id,basis).filter(r=>r.price>0).map(r=>({x:Date.parse(r.date+'T12:00:00'),y:r.price}))})).filter(s=>s.pts.length);
   if(series.length)h+='<div class="finhead">Evolución por marca (precio por '+esc(k.products[0].unit||'u')+')</div><div style="padding:6px 10px">'+multiLineSVG(series)+'</div>';
