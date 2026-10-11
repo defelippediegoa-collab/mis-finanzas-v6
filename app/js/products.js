@@ -8,9 +8,10 @@ function activeProducts(){return (DB.products||[]).filter(p=>!p.mergedInto);}
 function productById(id){return (DB.products||[]).find(p=>p.id===id)||null;}
 function resolveProduct(id){let p=productById(id),n=0;while(p&&p.mergedInto&&n++<10)p=productById(p.mergedInto);return p&&!p.mergedInto?p:null;}
 function aliasIndex(){if(_pIdx)return _pIdx;_pIdx=new Map();activeProducts().forEach(p=>(p.aliases||[]).forEach(a=>{if(!_pIdx.has(a))_pIdx.set(a,p.id);}));return _pIdx;}
-function kindKey(p){return normKey((p.kind||'')+' '+(p.variety||''));}
+function kindKey(p){return normKey(p.kind||'');}
 function kindLabel(p){return (p.kind||'')+(p.variety?' '+p.variety:'');}
-function kindsIndex(){const m=new Map();activeProducts().forEach(p=>{const k=kindKey(p);if(!k)return;let o=m.get(k);if(!o){o={key:k,kind:p.kind,variety:p.variety||'',products:[]};m.set(k,o);}o.products.push(p);});return m;}
+function kindsIndex(){const m=new Map();activeProducts().forEach(p=>{const k=kindKey(p);if(!k)return;let o=m.get(k);if(!o){o={key:k,kind:p.kind,variety:'',products:[]};m.set(k,o);}o.products.push(p);});return m;}
+function kindNames(){return [...new Set(activeProducts().map(p=>p.kind).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));}
 function productLabel(p){return p?p.name:'';}
 
 // ---- operaciones (todas persisten) ----
@@ -34,7 +35,7 @@ function mergeProducts(fromId,intoId){const a=productById(fromId),b=resolveProdu
   if(!b.brand&&a.brand)b.brand=a.brand;if(!b.size&&a.size)b.size=a.size;
   productsChanged(a);productsChanged(b);persist();return true;}
 function deleteProduct(pid){const p=productById(pid);if(!p)return;forEachItem((i,t)=>{if(i.productId===pid){delete i.productId;txTouch(t);}});DB.products=DB.products.filter(x=>x.id!==pid&&x.mergedInto!==pid);DB.products.forEach(x=>{if(x.mergedInto===pid)x.mergedInto=null;});productsChanged();persist();}
-function renameKind(key,f){activeProducts().forEach(p=>{if(kindKey(p)===key){p.kind=(f.kind||'').trim().toLowerCase();p.variety=(f.variety||'').trim().toLowerCase();productsChanged(p);}});persist();}
+function renameKind(key,f){activeProducts().forEach(p=>{if(kindKey(p)===key){p.kind=(f.kind||'').trim().toLowerCase();if(f.variety!==undefined)p.variety=(f.variety||'').trim().toLowerCase();productsChanged(p);}});persist();}
 // Al guardar un ticket: los ítems vinculados agregan su clave como alias (sin persist: lo hace el ticket)
 function commitItemLinks(items){(items||[]).forEach(i=>{if(i.productId&&!i.discount)linkKeysToProduct(i.productId,[i.key||normKey(i.desc)],{silent:true});});}
 

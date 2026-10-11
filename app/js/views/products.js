@@ -16,7 +16,7 @@ function renderProductsList(){
   [...kinds.values()].sort((a,b)=>a.label.localeCompare(b.label,'es')).forEach(k=>{
     h+='<div class="pj-sec pkind" data-key="'+esc(k.key)+'"><span>'+esc(k.label)+' <small style="color:var(--muted2)">· '+k.products.length+'</small></span>'+(k.products.length>1?'<small class="pkcmp">comparar ›</small>':'')+'</div><div class="catlist">';
     k.products.sort((a,b)=>a.name.localeCompare(b.name,'es')).forEach(p=>{const li=prodLastInfo(p);
-      h+='<div class="prow" data-id="'+esc(p.id)+'"><div class="pri"><div class="prn">'+esc(p.name)+'</div><div class="prs">'+esc([p.brand,p.size].filter(Boolean).join(' · ')||'sin marca')+(li?' · '+li.st.length+' comercio'+(li.st.length>1?'s':''):'')+'</div></div>'+
+      h+='<div class="prow" data-id="'+esc(p.id)+'"><div class="pri"><div class="prn">'+esc(p.name)+'</div><div class="prs">'+esc([p.variety,p.brand,p.size].filter(Boolean).join(' · ')||'sin marca')+(li?' · '+li.st.length+' comercio'+(li.st.length>1?'s':''):'')+'</div></div>'+
         (li?'<div class="prp"><b>'+(li.last.usd?'US$ '+li.last.raw:fmtP(li.last.price))+'</b><small>'+esc(li.last.merchant)+' · '+li.last.date.slice(5)+(li.trend!=null&&Math.abs(li.trend)>=0.005?' <span class="'+(li.trend>0?'neg':'pos')+'">'+(li.trend>0?'▲':'▼')+Math.abs(li.trend*100).toFixed(0)+'%</span>':'')+'</small></div>':'<div class="prp"><small>sin compras</small></div>')+'</div>';});
     h+='</div>';});
   $('#detailBody').innerHTML=h;
@@ -69,8 +69,8 @@ function openProductDetail(pid){const p=resolveProduct(pid);if(!p){toast('Produc
   body.querySelectorAll('.pdRange').forEach(a=>a.onclick=e=>{e.preventDefault();prodRange=+a.dataset.r;openProductDetail(pid);});
   body.querySelectorAll('.pal').forEach(c=>c.onclick=()=>{const n=rows.filter(r=>(r.i.key||normKey(r.i.desc))===c.dataset.a).length;if(!confirm('¿Quitar el alias "'+c.dataset.a+'"? '+(n?n+' compra'+(n>1?'s':'')+' queda'+(n>1?'n':'')+' sin producto.':'')))return;removeAlias(pid,c.dataset.a);openProductDetail(pid);if(detail)renderProductsList();});
   body.querySelectorAll('.pacts button').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
-    if(a==='rename'){const n=prompt('Nombre del producto',p.name);if(n&&n.trim()){updateProduct(pid,{name:n});openProductDetail(pid);if(detail)renderProductsList();}}
-    else if(a==='meta'){const kind=prompt('Tipo genérico (sin marca), ej: queso cremoso',p.kind||'');if(kind===null)return;const variety=prompt('Variedad (opcional), ej: instantáneo / entera',p.variety||'');if(variety===null)return;const brand=prompt('Marca (vacío si no sabés)',p.brand||'');if(brand===null)return;const size=prompt('Tamaño (opcional), ej: 1 l · 500 g · 473 ml x6',p.size||'');if(size===null)return;const unit=prompt('Unidad de precio: u, kg o l',p.unit||'u');if(unit===null)return;updateProduct(pid,{kind,variety,brand,size,unit:['u','kg','l','m'].includes(unit.trim())?unit.trim():'u'});openProductDetail(pid);if(detail)renderProductsList();}
+    if(a==='rename'){$('#cardDetScrim').classList.remove('on');openProductEdit(pid).then(()=>{openProductDetail(pid);if(detail)renderProductsList();});}
+    else if(a==='meta'){$('#cardDetScrim').classList.remove('on');openProductEdit(pid).then(()=>{openProductDetail(pid);if(detail)renderProductsList();});}
     else if(a==='merge'){$('#cardDetScrim').classList.remove('on');openProductPicker({desc:p.name,title:'Fusionar "'+p.name+'" en…',excludeId:pid,noCreate:true}).then(r=>{if(r&&r.productId){mergeProducts(pid,r.productId);toast('Fusionado');openProductDetail(r.productId);}else openProductDetail(pid);if(detail)renderProductsList();});}
     else if(a==='del'){if(rows.length&&!confirm('Este producto tiene '+rows.length+' compras. Se van a quedar sin producto (podés volver a vincularlas). ¿Eliminar igual?'))return;if(!rows.length&&!confirm('¿Eliminar el producto?'))return;deleteProduct(pid);$('#cardDetScrim').classList.remove('on');toast('Producto eliminado');if(detail)renderProductsList();}});
 }
@@ -78,14 +78,26 @@ function openProductDetail(pid){const p=resolveProduct(pid);if(!p){toast('Produc
 // ---- comparación por tipo (mismo genérico, distintas marcas) ----
 function openKindDetail(key){const k=kindsIndex().get(key);if(!k)return;const basis=CFG.priceBasis||'paid';const cmp=kindComparison(key,basis);
   let h='<div class="debtlist"><div class="finhead" style="border-top:none">Por marca · precio '+(basis==='list'?'de lista':'pagado')+' normalizado</div>';
-  cmp.forEach((c,i)=>{h+='<div class="debtrow" data-id="'+esc(c.p.id)+'"><div class="dinfo"><div class="dn">'+(i===0&&c.norm?'✓ ':'')+esc(c.p.name)+'</div><div class="ds">'+esc([c.p.brand,c.p.size].filter(Boolean).join(' · ')||'sin marca')+(c.best?' · '+esc(c.best.merchant)+' '+c.best.lastDate.slice(5):'')+'</div></div><div class="damt">'+(c.norm?fmtP(c.norm.v)+'<small style="display:block;color:var(--muted2);font-weight:400">por '+c.norm.u+'</small>':(c.best?fmtP(c.best.last)+'<small style="display:block;color:var(--muted2);font-weight:400">(sin tamaño)</small>':'<small>sin compras</small>'))+'</div></div>';});
+  cmp.forEach((c,i)=>{h+='<div class="debtrow" data-id="'+esc(c.p.id)+'"><div class="dinfo"><div class="dn">'+(i===0&&c.norm?'✓ ':'')+esc(c.p.name)+'</div><div class="ds">'+esc([c.p.variety,c.p.brand,c.p.size].filter(Boolean).join(' · ')||'sin marca')+(c.best?' · '+esc(c.best.merchant)+' '+c.best.lastDate.slice(5):'')+'</div></div><div class="damt">'+(c.norm?fmtP(c.norm.v)+'<small style="display:block;color:var(--muted2);font-weight:400">por '+c.norm.u+'</small>':(c.best?fmtP(c.best.last)+'<small style="display:block;color:var(--muted2);font-weight:400">(sin tamaño)</small>':'<small>sin compras</small>'))+'</div></div>';});
   const series=cmp.filter(c=>c.stores.length).map((c,i)=>({name:c.p.brand||c.p.name,color:cssv(PALETTE[i%PALETTE.length]),pts:productPriceRows(c.p.id,basis).filter(r=>r.price>0).map(r=>({x:Date.parse(r.date+'T12:00:00'),y:r.price}))})).filter(s=>s.pts.length);
   if(series.length)h+='<div class="finhead">Evolución por marca (precio por '+esc(k.products[0].unit||'u')+')</div><div style="padding:6px 10px">'+multiLineSVG(series)+'</div>';
   h+='<div style="padding:10px 16px"><button class="editbtn" id="kdRename" style="margin:0;width:100%">Renombrar tipo</button></div></div>';
   $('#cardDetTitle').textContent=kindLabel(k.products[0]);$('#cardDetBody').innerHTML=h;$('#cardDetScrim').classList.add('on');
   $('#cardDetBody').querySelectorAll('.debtrow[data-id]').forEach(el=>el.onclick=()=>openProductDetail(el.dataset.id));
-  $('#kdRename').onclick=()=>{const kind=prompt('Tipo genérico',k.kind);if(kind===null)return;const variety=prompt('Variedad (opcional)',k.variety||'');if(variety===null)return;renameKind(key,{kind,variety});$('#cardDetScrim').classList.remove('on');renderProductsList();};
+  $('#kdRename').onclick=()=>{const kind=prompt('Nuevo nombre del tipo (se aplica a sus '+k.products.length+' productos)',k.kind);if(kind===null||!kind.trim())return;renameKind(key,{kind});$('#cardDetScrim').classList.remove('on');renderProductsList();};
 }
+
+// ---- formulario de edición de un producto (nombre, tipo, variedad, marca, tamaño, unidad) ----
+let _pe=null;
+function openProductEdit(pid){const p=productById(pid);return new Promise(res=>{if(!p){res(false);return;}_pe={pid,res};
+  $('#pe-name').value=p.name;$('#pe-kind').value=p.kind||'';$('#pe-variety').value=p.variety||'';$('#pe-brand').value=p.brand||'';$('#pe-size').value=p.size||'';$('#pe-unit').value=p.unit||'u';
+  $('#pe-kinds').innerHTML=kindNames().map(k=>'<option value="'+esc(k)+'">').join('');$('#pe-brands').innerHTML=[...new Set(activeProducts().map(x=>x.brand).filter(Boolean))].sort().map(b=>'<option value="'+esc(b)+'">').join('');
+  $('#peKindHint').textContent=kindNames().length?('Tipos que ya usás: '+kindNames().slice(0,12).join(', ')+(kindNames().length>12?'…':'')):'';
+  $('#prodEditScrim').classList.add('on');});}
+function peDone(ok){const d=_pe;_pe=null;$('#prodEditScrim').classList.remove('on');if(d)d.res(ok);}
+$('#peOk').onclick=()=>{if(!_pe)return;const name=$('#pe-name').value.trim();if(!name){toast('Poné un nombre');return;}
+  updateProduct(_pe.pid,{name,kind:$('#pe-kind').value,variety:$('#pe-variety').value,brand:$('#pe-brand').value,size:$('#pe-size').value,unit:$('#pe-unit').value});toast('Producto actualizado');peDone(true);};
+$('#closePE').onclick=()=>peDone(false);$('#prodEditScrim').onclick=e=>{if(e.target===$('#prodEditScrim'))peDone(false);};
 
 // ---- picker: elegir o crear producto para una descripción ----
 let _pp=null;
