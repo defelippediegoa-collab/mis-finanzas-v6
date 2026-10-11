@@ -8,7 +8,7 @@ function prodLastInfo(p){const st=productStoreSummary(p.id);if(!st.length)return
 function renderProductsList(){
   const q=normKey(prodQuery);const unresolved=unresolvedItemKeys();
   let prods=activeProducts();if(q)prods=rankProducts(prodQuery,200).map(x=>x.p).concat(prods.filter(p=>normKey(p.name).includes(q)||normKey(p.brand).includes(q)||normKey(p.kind).includes(q))).filter((p,i,a)=>a.indexOf(p)===i);
-  const kinds=new Map();prods.forEach(p=>{const k=kindKey(p)||'(sin tipo)';let o=kinds.get(k);if(!o){o={key:k,label:kindLabel(p)||'(sin tipo)',products:[]};kinds.set(k,o);}o.products.push(p);});
+  const kinds=new Map();prods.forEach(p=>{const k=kindKey(p)||'(sin tipo)';let o=kinds.get(k);if(!o){o={key:k,label:p.kind||'(sin tipo)',products:[]};kinds.set(k,o);}o.products.push(p);});
   let h='<div class="prodtop"><input id="prodSearch" placeholder="Buscar producto, marca o tipo…" value="'+esc(prodQuery)+'">';
   if(unresolved.length)h+='<div class="inboxbar" id="prodLinkBar" style="margin:10px 0 0">🏷️ <b>'+unresolved.length+'</b> ítem'+(unresolved.length>1?'s':'')+' de tickets sin producto · vincular ›</div>';
   h+='</div>';
@@ -82,7 +82,7 @@ function openKindDetail(key){const k=kindsIndex().get(key);if(!k)return;const ba
   const series=cmp.filter(c=>c.stores.length).map((c,i)=>({name:c.p.brand||c.p.name,color:cssv(PALETTE[i%PALETTE.length]),pts:productPriceRows(c.p.id,basis).filter(r=>r.price>0).map(r=>({x:Date.parse(r.date+'T12:00:00'),y:r.price}))})).filter(s=>s.pts.length);
   if(series.length)h+='<div class="finhead">Evolución por marca (precio por '+esc(k.products[0].unit||'u')+')</div><div style="padding:6px 10px">'+multiLineSVG(series)+'</div>';
   h+='<div style="padding:10px 16px"><button class="editbtn" id="kdRename" style="margin:0;width:100%">Renombrar tipo</button></div></div>';
-  $('#cardDetTitle').textContent=kindLabel(k.products[0]);$('#cardDetBody').innerHTML=h;$('#cardDetScrim').classList.add('on');
+  $('#cardDetTitle').textContent=k.kind;$('#cardDetBody').innerHTML=h;$('#cardDetScrim').classList.add('on');
   $('#cardDetBody').querySelectorAll('.debtrow[data-id]').forEach(el=>el.onclick=()=>openProductDetail(el.dataset.id));
   $('#kdRename').onclick=()=>{const kind=prompt('Nuevo nombre del tipo (se aplica a sus '+k.products.length+' productos)',k.kind);if(kind===null||!kind.trim())return;renameKind(key,{kind});$('#cardDetScrim').classList.remove('on');renderProductsList();};
 }
