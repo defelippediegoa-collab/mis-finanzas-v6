@@ -27,6 +27,8 @@ async function cloudPush(silent,_retry){
   if(silent){if(!CFG.syncUrl)return;}else{readSyncForm();if(!CFG.syncUrl){toast('Pegá primero la URL');return;}}
   if(!silent)setSyncSt('Estado: subiendo…');
   if(!(await ensureServer(silent))){setSyncSt('Estado: servidor no verificado');return;}
+  // Nunca subir una base vacía en automático; a mano, solo con confirmación explícita (pisaría la nube).
+  if(!DB.tx.length){if(silent)return;if(!confirm('Tu teléfono no tiene movimientos. Si subís, la nube queda VACÍA y perdés lo que haya ahí.\n\n¿Subir igual?')){setSyncSt('Estado: subida cancelada (base vacía)');return;}}
   try{const j=await apiPost('blob',{db:DB});
     if(j&&j.ok){const shErr=j.sheets&&j.sheets!=='ok'?(' · Sheet: '+j.sheets):'';setSyncSt('Estado: subido '+new Date().toLocaleString('es-AR')+shErr);if(!silent)toast(shErr?'Datos en la nube ✓ pero el Sheet falló (revisá SHEET_ID)':'Datos en la nube ✓');return;}
     if(j&&j.code==='STALE'&&!_retry){ // la nube tiene algo más nuevo: fusionamos y volvemos a subir

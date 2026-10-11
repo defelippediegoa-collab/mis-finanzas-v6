@@ -12,5 +12,11 @@ $('#fileIn').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new Fil
     if(!confirm('El archivo tiene '+d.tx.length+' movimientos, '+d.accounts.length+' cuentas y '+d.reminders.length+' recordatorios.\n\n¿Reemplazar los datos actuales ('+DB.tx.length+' movimientos)?'))return;
     DB=d;persist();render();toast(DB.tx.length+' movimientos cargados');}catch(err){toast('No se pudo leer el archivo');}};r.readAsText(f);e.target.value='';};
 $('#demoBtn').onclick=()=>{DB=normalize(defaultDB());persist();render();$('#menu').classList.remove('on');toast('Ejemplo cargado');};
-$('#wipeBtn').onclick=()=>{if(confirm('¿Borrar todos los datos?')){DB=normalize({tx:[],reminders:[],accounts:JSON.parse(JSON.stringify(DEF_ACCOUNTS))});persist();render();$('#menu').classList.remove('on');toast('Todo borrado');}};
+// Borrar todo: doble confirmación (con palabra escrita), copia de seguridad automática y SIN subir a la nube.
+$('#wipeBtn').onclick=()=>{$('#menu').classList.remove('on');const n=DB.tx.length;
+  if(!confirm('Vas a borrar TODOS los datos de este teléfono ('+n+' movimientos, '+DB.accounts.length+' cuentas).\n\nLa nube NO se toca y la sincronización automática se desactiva. Antes de borrar se descarga una copia.\n\n¿Seguir?'))return;
+  const w=prompt('Para confirmar, escribí BORRAR en mayúsculas:');if(w!=='BORRAR'){toast('Cancelado, no se borró nada');return;}
+  try{download('finanzas_backup_antes_de_borrar.json',JSON.stringify(DB),'application/json');}catch(e){}
+  CFG.syncAuto=false;saveCfg();
+  DB=normalize({tx:[],reminders:[],accounts:JSON.parse(JSON.stringify(DEF_ACCOUNTS))});DB.updatedAt=Date.now();Store.save(DB);render();toast('Todo borrado · se descargó una copia · sync automática apagada');};
 
