@@ -26,6 +26,7 @@
     <button id="inboxBtn">📥 Pendientes de WhatsApp</button>
     <button id="bulkBtn">☑️ Edición masiva</button>
     <button id="productsBtn">🏷️ Productos y precios</button>
+    <button id="loanBtn">🏦 Nuevo préstamo</button>
     <button id="remindersBtn">Recordatorios</button>
     <button id="pasteRemBtn">Pegar recordatorios de Claude</button>
     <button id="newAccBtn">Nueva cuenta</button>
@@ -134,6 +135,11 @@
   <div class="fld hidden" id="f-note-wrap"><label>Nota</label><input id="f-note" list="note-suggestions" autocomplete="off" placeholder="Empezá a escribir; te sugiere notas ya usadas"><datalist id="note-suggestions"></datalist></div>
   <div class="fld hidden" id="f-tags-wrap"><label>Etiquetas (opcional, separadas por coma)</label><input id="f-tags" list="tag-suggestions" autocomplete="off" placeholder="auto, vacaciones…"><datalist id="tag-suggestions"></datalist></div>
   <div class="fld hidden" id="f-items-wrap"><button class="editbtn" id="f-items-btn" style="margin:0;width:100%"></button></div>
+  <div class="fld hidden" id="f-pend-wrap"><div class="ratebox" style="margin:0"><div class="rl" id="f-pend-txt"></div></div><button class="editbtn" id="f-pend-ok" style="margin:8px 0 0;width:100%;background:var(--income);border-color:var(--income);color:#fff;font-weight:600">✅ Confirmar que lo recibí</button></div>
+  <div class="fld hidden" id="f-ref-wrap"><label class="refhead"><input type="checkbox" id="f-ref-on"> ↩ Tiene reintegro (te devuelven parte en otra cuenta)</label>
+    <div id="f-ref-fields" class="hidden"><div class="row2" style="padding:4px 0"><div><label style="font-size:12px;color:var(--muted)">% que vuelve</label><input type="number" id="f-ref-pct" inputmode="decimal" placeholder="20"></div><div><label style="font-size:12px;color:var(--muted)">o importe fijo</label><input type="number" id="f-ref-amt" inputmode="decimal" placeholder="0"></div></div>
+    <div class="row2" style="padding:4px 0"><div><label style="font-size:12px;color:var(--muted)">Vuelve a</label><select id="f-ref-acc"></select></div><div><label style="font-size:12px;color:var(--muted)">Fecha estimada</label><input type="date" id="f-ref-due"></div></div>
+    <div class="hint" id="f-ref-hint"></div><div class="hint" id="f-ref-state" style="color:var(--muted)"></div></div></div>
   <div class="extra hidden" id="fxExtra"><div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Tipo de cambio</label><input type="number" id="f-rate" inputmode="decimal" placeholder="0"></div><div><label style="font-size:12px;color:var(--muted)" id="fxToLbl">Recibe</label><input id="f-amountto" disabled></div></div><div class="hint" style="padding:0 18px" id="fxHint"></div></div>
   <div class="fld"><label>Fecha</label><input type="date" id="f-date"></div>
   <div id="payModeWrap">
@@ -179,6 +185,9 @@
       <div class="fld"><label>Subcategoría</label><select id="tk-sub"></select></div>
       <div class="fld"><label>Nota</label><input id="tk-note" placeholder="Se usa el comercio si lo dejás vacío"></div>
     </div>
+    <div class="fld" id="tkRefWrap"><label class="refhead"><input type="checkbox" id="tk-ref-on"> ↩ Tiene reintegro</label>
+      <div id="tk-ref-fields" class="hidden"><div class="row2" style="padding:4px 0"><div><label style="font-size:12px;color:var(--muted)">% que vuelve</label><input type="number" id="tk-ref-pct" inputmode="decimal" placeholder="20"></div><div><label style="font-size:12px;color:var(--muted)">o importe fijo</label><input type="number" id="tk-ref-amt" inputmode="decimal" placeholder="0"></div></div>
+      <div class="row2" style="padding:4px 0"><div><label style="font-size:12px;color:var(--muted)">Vuelve a</label><select id="tk-ref-acc"></select></div><div><label style="font-size:12px;color:var(--muted)">Fecha estimada</label><input type="date" id="tk-ref-due"></div></div></div></div>
     <button class="save" id="tkSave">Guardar</button>
     <button class="del hidden" id="tkDel">Quitar el detalle de ítems</button>
   </div>
@@ -218,6 +227,20 @@
   <div class="hint" style="padding:10px 18px 6px;color:var(--muted)">Ítems de tus tickets que todavía no tienen producto. Marcá los correctos, elegí con … o completá con la IA.</div>
   <div id="plList"></div>
   <div class="bkactions"><div class="row2" style="padding:10px 18px 16px"><button class="editbtn hidden" id="plAi" style="margin:0;width:100%">✨ Completar con IA</button><button class="save" id="plApply" style="margin:0;width:100%">Aplicar</button></div></div>
+</div></div>
+
+<!-- LOAN SHEET -->
+<div class="scrim" id="loanScrim"><div class="sheet">
+  <h3><span>🏦 Nuevo préstamo</span><button class="x" id="closeLoan">×</button></h3>
+  <div class="hint" style="padding:10px 18px 0;color:var(--muted)">La plata entra a tu cuenta pero no es un ingreso: queda como deuda en una cuenta "Préstamo" y se arma el recordatorio de las cuotas.</div>
+  <div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Nombre</label><input id="l-name" placeholder="Personal Galicia"></div><div><label style="font-size:12px;color:var(--muted)">Quién presta</label><input id="l-lender" placeholder="Banco, Papá…"></div></div>
+  <div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Recibiste</label><input type="number" class="big" id="l-received" inputmode="decimal" placeholder="500000"></div><div><label style="font-size:12px;color:var(--muted)">En la cuenta</label><select id="l-in"></select></div></div>
+  <div class="fld"><label>Fecha en que lo recibiste</label><input type="date" id="l-date"></div>
+  <div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Total a devolver</label><input type="number" id="l-total" inputmode="decimal" placeholder="660000"></div><div><label style="font-size:12px;color:var(--muted)">Cuotas</label><input type="number" id="l-n" min="1" max="120" value="12"></div></div>
+  <div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Mes 1ª cuota</label><input type="month" id="l-first"></div><div><label style="font-size:12px;color:var(--muted)">Pagás desde</label><select id="l-pay"></select></div></div>
+  <div class="hint" id="loanHint" style="padding:0 18px"></div>
+  <button class="save" id="saveLoan">Crear préstamo</button>
+  <div style="height:10px"></div>
 </div></div>
 
 <!-- INBOX SHEET -->
@@ -362,6 +385,7 @@
 <script src="js/views/ticket.js"></script>
 <script src="js/views/items.js"></script>
 <script src="js/views/products.js"></script>
+<script src="js/views/loans.js"></script>
 <script src="js/views/inbox.js"></script>
 <script src="js/share.js"></script>
 <script src="js/views/bulk.js"></script>

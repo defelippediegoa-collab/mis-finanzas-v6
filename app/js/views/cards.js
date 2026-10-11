@@ -13,7 +13,8 @@ function debtAtARS(D){
     else if(t.type==='transfer'&&per[t.to]!=null){if(t.date<=D)per[t.to]-=(t.amountTo!=null?t.amountTo:t.amount);}
   });
   let s=0;Object.entries(per).forEach(([n,v])=>{s+=toARS(Math.max(0,v),curOf(n))||0;});
-  return s;}
+  return s+loansDebtAtARS(D);}
+function cardsDebtOnlyARS(D){return debtAtARS(D)-loansDebtAtARS(D);}
 function renderCardsView(){  const cards=DB.accounts.filter(a=>a.type==='Tarjetas de crédito'&&a.includeInTotal!==false);
   const months=[];for(let i=0;i<6;i++){const d=new Date(TODAY.getFullYear(),TODAY.getMonth()+i,1);months.push({m:ym(d),lab:d.toLocaleDateString('es-AR',{month:'short'}).replace('.','')});}
   // monto por tarjeta y mes: i=0 vencido neteado, i=1 próximo neteado, i>=2 suma cruda por mes de pago
@@ -52,9 +53,11 @@ function renderCardsView(){  const cards=DB.accounts.filter(a=>a.type==='Tarjeta
       dbars+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-5)+'" font-size="9" fill="var(--muted2)" text-anchor="middle">'+s.lab+'</text>';});
     dbars='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'+dbars+'</svg>';}
   h+='<div class="pj-sec"><span>Nivel de endeudamiento</span></div>';
-  h+='<div class="acchero"><div class="ahlbl">Deuda total hoy (todas las cuotas por pagar)</div><div class="big neg">'+money(dNow)+'</div>'+
+  const dLoans=loansDebtAtARS(hoyStr);
+  h+='<div class="acchero"><div class="ahlbl">Deuda total hoy (tarjetas'+(dLoans>0?' + préstamos':'')+')</div><div class="big neg">'+money(dNow)+'</div>'+(dLoans>0?'<div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">💳 tarjetas '+money(dNow-dLoans)+' · 🏦 préstamos '+money(dLoans)+'</div>':'')+
     '<div class="'+(delta<=0?'pos':'neg')+'" style="font-weight:700;font-size:13.5px;margin-bottom:2px">'+(delta<=0?'▼ Bajó ':'▲ Subió ')+money(Math.abs(delta))+' desde fin de '+finMesPasado.toLocaleDateString('es-AR',{month:'long'})+'</div>'+
     '<div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Este mes: compras con tarjeta '+money(compras)+' · pagos '+money(pagosM)+'</div>'+dbars+'</div>';
+  h+=loansSectionHtml();
   // ---- Compromisos mensuales: vencimientos de tarjeta + recordatorios de cada mes ----
   const compM=[];
   for(let i=0;i<6;i++){const d=new Date(TODAY.getFullYear(),TODAY.getMonth()+i,1);const m=ym(d);
@@ -97,7 +100,7 @@ function renderCardsView(){  const cards=DB.accounts.filter(a=>a.type==='Tarjeta
     let ctot='<tr class="tot"><th>Total ARS</th>';catColTot.forEach(v=>{ctot+='<td>'+(v>0?money(v):'—')+'</td>';});ctot+='</tr>';
     h+='<div class="cardtblwrap"><table class="cardtbl">'+chead+crows+ctot+'</table></div>';
   }
-  $('#cardsBody').innerHTML=h;
+  $('#cardsBody').innerHTML=h;bindLoansSection();
   document.querySelectorAll('#cardsBody .catrow').forEach(el=>el.onclick=()=>openCardCatDetail(el.dataset.cat));
   document.querySelectorAll('#cardsBody .cardtbl td.tap').forEach(td=>td.onclick=()=>openCardMonthDetail(td.dataset.acc,td.dataset.m,+td.dataset.i,td.dataset.lab));
 }

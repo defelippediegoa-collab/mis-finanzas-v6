@@ -20,8 +20,31 @@ function openSheet(id,preset){
   const src=t||preset||{};
   if(fType!=='transfer'){fill($('#f-category'),DB.cats[fType==='income'?'income':'expense'],src.category);refreshSub(src.sub);fillAccounts($('#f-account'),src.account);if(fType==='expense'&&isCard(src.account))$('#f-paymonth').value=src.dueMonth||(src.date?ymOf(src.date):nx);}
   if(fType==='transfer'){fillAccounts($('#f-account'),t?t.from:(preset?preset.from:undefined));fillAccounts($('#f-to'),t?t.to:(preset?preset.to:undefined));}
-  refreshPayUI();refreshFx();setAmtLabel();$('#scrim').classList.add('on');
+  refreshPayUI();refreshFx();setAmtLabel();refundUI(t);$('#scrim').classList.add('on');
 }
+// ---- reintegro (gasto) y confirmación (ingreso pendiente) ----
+function refundUI(t){const isExp=fType==='expense';const w=$('#f-ref-wrap');w.classList.toggle('hidden',!isExp);
+  const pend=$('#f-pend-wrap');const isPend=!!(t&&t.type==='income'&&t.pending);pend.classList.toggle('hidden',!isPend);
+  if(isPend){const src=DB.tx.find(x=>x.id===t.refundOf||x.ticketId===t.refundOf);$('#f-pend-txt').textContent='⏳ Reintegro pendiente'+(src?' de "'+(src.merchant||stripInst(src.note)||src.category)+'" ('+money(src.amount,src.currency||'ARS')+')':'')+'. No suma al saldo hasta que lo confirmes.';}
+  if(!isExp)return;
+  const r=t&&t.refund;const linked=t?refundFor(t):null;
+  $('#f-ref-on').checked=!!r;$('#f-ref-fields').classList.toggle('hidden',!r);
+  fillAccounts($('#f-ref-acc'),r?r.account:(DB.accounts.find(a=>a.type==='Cuentas')||{}).name);
+  $('#f-ref-pct').value=r&&r.pct?r.pct:'';$('#f-ref-amt').value=r&&!r.pct?r.amount:'';$('#f-ref-due').value=r?r.due:shiftMonthStr(localDate(),1);
+  $('#f-ref-state').textContent=linked?(linked.pending?'Ingreso pendiente creado para el '+linked.date+'.':'Reintegro ya recibido el '+linked.date+' ✓'):'';
+  refundHint();}
+function refundVals(amt){const pct=parseFloat($('#f-ref-pct').value)||0;let a=parseFloat($('#f-ref-amt').value)||0;if(pct>0)a=Math.round(amt*pct/100*100)/100;return{pct:pct>0?pct:0,amount:Math.round(a*100)/100,account:$('#f-ref-acc').value,due:$('#f-ref-due').value||localDate()};}
+function refundHint(){const amt=parseFloat($('#f-amount').value)||0;const v=refundVals(amt);$('#f-ref-hint').textContent=v.amount>0?('Te vuelven '+money(v.amount)+' a '+v.account+' (estimado '+v.due+')'):'';}
+$('#f-ref-on').onchange=()=>{$('#f-ref-fields').classList.toggle('hidden',!$('#f-ref-on').checked);refundHint();};
+['#f-ref-pct','#f-ref-amt','#f-ref-acc','#f-ref-due'].forEach(s=>$(s).oninput=refundHint);
+$('#f-ref-pct').oninput=()=>{if($('#f-ref-pct').value)$('#f-ref-amt').value='';refundHint();};$('#f-ref-amt').oninput=()=>{if($('#f-ref-amt').value)$('#f-ref-pct').value='';refundHint();};
+$('#f-pend-ok').onclick=()=>{const t=DB.tx.find(x=>x.id===editId);if(!t||!t.pending)return;t.pending=false;t.date=$('#f-date').value||localDate();t.amount=parseFloat($('#f-amount').value)||t.amount;t.account=$('#f-account').value||t.account;t.currency=curOf(t.account);t.updatedAt=Date.now();persist();$('#scrim').classList.remove('on');render();if(detail&&detailRefresh)detailRefresh();toast('Reintegro confirmado · +'+money(t.amount,t.currency));};
+// Aplica la sección reintegro a un gasto recién guardado o editado (refOf = id o ticketId)
+function applyRefund(t,refOf,amtTotal){const on=$('#f-ref-on').checked;const linked=refundFor(t);
+  if(!on){if(t.refund){delete t.refund;if(linked&&linked.pending&&confirm('¿Borrar también el reintegro pendiente?'))DB.tx=DB.tx.filter(x=>x!==linked);}return;}
+  const v=refundVals(amtTotal);if(!(v.amount>0))return;t.refund=v;
+  if(linked){if(linked.pending){linked.amount=v.amount;linked.account=v.account;linked.currency=curOf(v.account);linked.date=v.due;linked.updatedAt=Date.now();}}
+  else createRefundIncome(refOf,{amount:v.amount,account:v.account,due:v.due,note:'Reintegro '+(v.pct?v.pct+'% ':'')+(t.merchant||stripInst(t.note)||t.category||'')});}
 function refreshType(){const tr=fType==='transfer';$('#f-to-wrap').classList.toggle('hidden',!tr);$('#f-cat-wrap').classList.toggle('hidden',tr);$('#f-sub-wrap').classList.toggle('hidden',tr);$('#f-note-wrap').classList.remove('hidden');$('#f-tags-wrap').classList.remove('hidden');$('#f-acc-lbl').textContent=tr?'Desde':'Cuenta';if(!tr){fill($('#f-category'),DB.cats[fType==='income'?'income':'expense']);refreshSub();}refreshPayUI();refreshFx();}
 function refreshPayUI(){const card=fType==='expense'&&isCard($('#f-account').value);$('#payModeWrap').classList.toggle('hidden',!card);if(!card){fPay='once';$('#onceExtra').classList.add('hidden');$('#instExtra').classList.add('hidden');$('#subExtra').classList.add('hidden');return;}$('#onceExtra').classList.toggle('hidden',fPay!=='once');$('#instExtra').classList.toggle('hidden',fPay!=='inst');$('#subExtra').classList.toggle('hidden',fPay!=='sub');}
 function refreshSub(s0){const cat=$('#f-category').value;fill($('#f-sub'),['—',...(DB.subs[cat]||[])],s0||'—');}
@@ -40,6 +63,7 @@ $('#saveTx').onclick=()=>{
     if(tags.length)t.tags=tags;else delete t.tags;
     if(fType==='transfer'){t.type='transfer';t.from=$('#f-account').value;t.to=$('#f-to').value;t.currency=curOf(t.from);t.note=$('#f-note').value||'';delete t.account;delete t.category;delete t.sub;}
     else{t.type=fType;t.account=$('#f-account').value;t.category=$('#f-category').value;t.sub=$('#f-sub').value==='—'?'':$('#f-sub').value;t.currency=curOf(t.account);t.note=$('#f-note').value||'';if(fType==='expense'&&isCard(t.account)&&fPay==='once'){t.dueMonth=$('#f-paymonth').value;}else delete t.dueMonth;}
+    if(t.type==='expense')applyRefund(t,t.ticketId||t.id,t.inst?t.amount*t.inst[1]:t.amount);else{delete t.refund;}
     persist();$('#scrim').classList.remove('on');cur=new Date(+date.slice(0,4),+date.slice(5,7)-1,1);render();if(detail&&detailRefresh)detailRefresh();toast(wasHist?'Actualizado · ahora afecta el saldo':'Actualizado');return;}
   const ibx=INBOX_EDIT?{source:'wa',inboxId:INBOX_EDIT}:{}; // vino de la bandeja de WhatsApp
   if(fType==='transfer'){const from=$('#f-account').value,to=$('#f-to').value;const fc=curOf(from),tc=curOf(to);
@@ -51,7 +75,8 @@ $('#saveTx').onclick=()=>{
       for(let i=0;i<n;i++){const pay=new Date(fy,fm-1+i,1); // shiftMonthStr no desborda el mes (31/01 + 1 mes = 28/02, no 03/03)
         DB.tx.push({...base,id:sid+'_'+i,date:shiftMonthStr(date,i),amount:per,dueMonth:ym(pay),purchaseDate:date,inst:[i+1,n],note:(base.note?base.note+' ':'')+'('+(i+1)+'/'+n+')'});}}
     else if(fType==='expense'&&card&&fPay==='sub'){DB.reminders.push({id:'r'+Date.now(),type:'expense',name:(sub||$('#f-category').value||'Suscripción'),amount:amt,freq:'monthly',from:$('#f-subfrom').value,until:'',account:accName,category:$('#f-category').value});persist();$('#scrim').classList.remove('on');setView('proj');toast('Suscripción agregada a recordatorios');return;}
-    else{const rec={...base,id:'u'+Date.now(),date,amount:amt};if(fType==='expense'&&card){rec.dueMonth=$('#f-paymonth').value;rec.purchaseDate=date;}DB.tx.push(rec);}}
+    else{const rec={...base,id:'u'+Date.now(),date,amount:amt};if(fType==='expense'&&card){rec.dueMonth=$('#f-paymonth').value;rec.purchaseDate=date;}DB.tx.push(rec);}
+    if(fType==='expense'&&$('#f-ref-on').checked){const last=DB.tx[DB.tx.length-1];const first=last.inst?DB.tx.find(x=>x.id===last.id.split('_')[0]+'_0')||last:last;applyRefund(first,first.ticketId||first.id,amt);}}
   if(INBOX_EDIT){inboxMarkDone([INBOX_EDIT],'done');INBOX_EDIT=null;}
   persist();$('#scrim').classList.remove('on');cur=new Date(+date.slice(0,4),+date.slice(5,7)-1,1);render();toast('Guardado');
 };
@@ -63,6 +88,7 @@ $('#delTx').onclick=()=>{
   if(!editId)return;const t=DB.tx.find(x=>x.id===editId);if(!t){$('#scrim').classList.remove('on');return;}
   const prefix=editId.split('_')[0];
   const series=DB.tx.filter(x=>x.id!==editId&&((t.ticketId&&x.ticketId===t.ticketId)||x.id.split('_')[0]===prefix));
+  const linkedRef=t.type==='expense'?refundFor(t):null;
   let delIds=[editId];
   if(t.ticketId&&series.length){
     if(confirm('Este movimiento es parte de un ticket con '+(series.length+1)+' movimientos (partes por categoría o cuotas). ¿Eliminar el ticket completo?\n\nAceptar = todo el ticket · Cancelar = elegir solo este')){
@@ -75,6 +101,7 @@ $('#delTx').onclick=()=>{
   } else {
     if(!confirm('¿Eliminar este movimiento?'))return;
   }
+  if(linkedRef&&linkedRef.pending&&confirm('Este gasto tiene un reintegro pendiente de '+money(linkedRef.amount,linkedRef.currency)+'. ¿Borrarlo también?'))delIds.push(linkedRef.id);
   DB.tx=DB.tx.filter(x=>!delIds.includes(x.id));persist();$('#scrim').classList.remove('on');
   if(detail&&detailRefresh)detailRefresh();else render();toast(delIds.length>1?delIds.length+' movimientos eliminados':'Eliminado');
 };

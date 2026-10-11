@@ -247,6 +247,8 @@
   .tk-dmode{font-size:11px;background:#12141f;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:3px 6px;font-family:inherit;max-width:100%}
   .tkcrow{display:block;font-size:13px;padding:4px 0}
   .badge.tk{background:#2a2636;color:#c9b8ff}
+  .badge.pend{background:#3a2f1f;color:var(--warn,#e0bd6a)}.tx.pend{opacity:.6}
+  .refhead{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--txt)!important;margin-bottom:4px!important}.refhead input{width:18px;height:18px;accent-color:var(--accent)}
   .tkprod{background:none;border:1px dashed var(--line);color:var(--muted2);border-radius:8px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tkprod.set{border-style:solid;border-color:#5b8c6e;color:var(--good,#74b58f)}.tkprod.sug{border-style:solid;border-color:var(--warn,#e0bd6a);color:var(--warn,#e0bd6a)}
   .prodtop{padding:10px 16px 4px}.prodtop input{width:100%;background:#12141f;border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit}

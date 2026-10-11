@@ -8,10 +8,10 @@ function renderPanel(){
   $('#pmCaja').classList.toggle('on',panelMode==='caja');$('#pmMes').classList.toggle('on',panelMode==='mes');
   const m=ym(cur);
   const isHid=n=>{const a=acct(n);return a&&a.includeInTotal===false;};
-  const isOper=n=>{const a=acct(n);return a&&a.includeInTotal!==false&&a.type!=='Tarjetas de crédito';};
+  const isOper=n=>{const a=acct(n);return a&&a.includeInTotal!==false&&a.type!=='Tarjetas de crédito'&&a.type!=='Préstamo';};
   let I=0,C=0,compras=0,pagos=0,deAh=0,aAh=0;
   DB.tx.forEach(t=>{if(ymOf(t.date)!==m)return;const cu=t.currency||'ARS';const ars=toARS(t.amount,cu)||0;
-    if(t.type==='income'&&!isCard(t.account)){I+=ars;if(isHid(t.account))aAh+=ars;}
+    if(t.type==='income'&&!t.pending&&!isCard(t.account)){I+=ars;if(isHid(t.account))aAh+=ars;}
     else if(t.type==='expense'){C+=ars;if(isCard(t.account))compras+=ars;else if(isHid(t.account))deAh+=ars;}
     else if(t.type==='transfer'){const amtTo=t.amountTo!=null?t.amountTo:t.amount;const vTo=toARS(amtTo,curOf(t.to))||0;
       if(isCard(t.to)&&!isCard(t.from)){pagos+=vTo;if(isHid(t.from))deAh+=vTo;}
@@ -37,12 +37,14 @@ function renderPanel(){
     if(panelMode==='caja'){
       const esFut=ym(cur)>ym(TODAY);
       let vencM=0;if(esFut)DB.tx.forEach(t=>{if(t.type==='expense'&&isCard(t.account)&&payMonthOf(t)===ym(cur))vencM+=toARS(t.amount,t.currency||'ARS')||0;});
-      const calc=ini+I+ahNeto-pagos-cash-vencM;
+      const LF=loanFlowsARS(ym(cur));
+      const calc=ini+I+ahNeto+LF.recv-LF.repaid-pagos-cash-vencM;
       const real=esHoy?capitalNow():null;
       const dif=real!=null?(real-calc):null;
       s='<div class="stcard">';
       s+=stRow('Saldo inicial del mes',(ini>=0?'+':'−'),ini,sgn(ini),esFut?'proyectado con los movimientos ya cargados':'');
       s+=stRow('Ingresos del mes','+',I,'pos');
+      if(LF.recv>0.5)s+=stRow('Préstamos recibidos','+',LF.recv,'pos','entra plata pero es deuda');if(LF.repaid>0.5)s+=stRow('Capital de préstamos devuelto','−',LF.repaid,'neg');
       s+=stRow('Transferencias con ahorros (neto)',(ahNeto>=0?'+':'−'),ahNeto,ahNeto>=0?'pos':'neg','sacaste '+money(deAh)+' · mandaste '+money(aAh));
       s+=stRow('Pagos a tarjetas (liquidaciones)','−',pagos,'neg');
       if(esFut)s+=stRow('Vencimientos de tarjeta a liquidar','−',vencM,'neg','cuotas y consumos con mes de pago '+monthName(cur).split(' ')[0]);
@@ -71,7 +73,7 @@ function renderPanel(){
     return;
   }
   if(panelMode==='caja'){
-    const salidas=cash+pagos;const bal=I-salidas;const balCon=bal+deAh-aAh;
+    const salidas=cash+pagos;const bal=I-salidas;const LF=loanFlowsARS(ym(cur));const balCon=bal+deAh-aAh+LF.recv-LF.repaid;
     let subSaldo='disponible en tus cuentas';
     if(ym(cur)===ym(TODAY)){
       const D=new Date(cur.getFullYear(),cur.getMonth(),1);let ini=0;
@@ -118,7 +120,7 @@ function openPanelDetail(kind){
   }
   else if(kind==='ing'){
     title='Ingresos de '+monthName(cur).split(' ')[0];
-    const rows=mtx.filter(t=>t.type==='income'&&!isCard(t.account)).sort((a,b)=>b.amount-a.amount);
+    const rows=mtx.filter(t=>t.type==='income'&&!t.pending&&!isCard(t.account)).sort((a,b)=>b.amount-a.amount);
     h=listOut(rows,'pos')+'<div class="debttot"><span>Total ingresos</span><span class="pos">'+money(tot)+'</span></div>';
     const ah=mtx.filter(t=>t.type==='transfer'&&((isHidN(t.from)&&isOperN(t.to))||(isOperN(t.from)&&isHidN(t.to))));
     if(ah.length){h+='<div class="finhead">🐷 Movimientos con ahorros (no suman al balance)</div>';
@@ -160,7 +162,7 @@ function openPanelDetail(kind){
   }
   else if(kind==='balmes'){
     title='Balance del mes · fórmula';
-    let I=0,C=0;mtx.forEach(t=>{const cu=t.currency||'ARS';if(t.type==='income'&&!isCard(t.account))I+=toARS(t.amount,cu)||0;else if(t.type==='expense')C+=toARS(t.amount,cu)||0;});
+    let I=0,C=0;mtx.forEach(t=>{const cu=t.currency||'ARS';if(t.type==='income'&&!t.pending&&!isCard(t.account))I+=toARS(t.amount,cu)||0;else if(t.type==='expense')C+=toARS(t.amount,cu)||0;});
     const rp=remDebtARS(m);
     h='<div class="finrow" style="padding-top:12px"><span>Ingresos</span><span class="pos">+'+money(I)+'</span></div>'+
       '<div class="finrow"><span>Gastos (tarjeta + contado)</span><span class="neg">−'+money(C)+'</span></div>'+
@@ -177,7 +179,7 @@ function openCajaConcil(){
   const isOperN=n=>{const a=acct(n);return a&&a.includeInTotal!==false&&a.type!=='Tarjetas de crédito';};
   let I=0,cash=0,pagos=0,deAh=0,aAh=0,gOc=0,iOc=0;const gOcRows=[],iOcRows=[],fxN=[];
   DB.tx.forEach(t=>{if(ymOf(t.date)!==m)return;const cu=t.currency||'ARS';const ars=toARS(t.amount,cu)||0;
-    if(t.type==='income'&&!isCard(t.account)){I+=ars;if(isHidN(t.account)){iOc+=ars;iOcRows.push(t);aAh+=ars;}}
+    if(t.type==='income'&&!t.pending&&!isCard(t.account)){I+=ars;if(isHidN(t.account)){iOc+=ars;iOcRows.push(t);aAh+=ars;}}
     else if(t.type==='expense'&&!isCard(t.account)){cash+=ars;if(isHidN(t.account)){gOc+=ars;gOcRows.push(t);deAh+=ars;}}
     else if(t.type==='transfer'){const amtTo=t.amountTo!=null?t.amountTo:t.amount;const vTo=toARS(amtTo,curOf(t.to))||0;
       if(isCard(t.to)&&!isCard(t.from)){pagos+=vTo;if(isHidN(t.from))deAh+=vTo;}

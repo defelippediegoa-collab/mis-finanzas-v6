@@ -106,7 +106,8 @@ function tkShowForm(t){
     fill($('#tk-category'),DB.cats.expense,def.category);tkRefreshSub(def.sub);
     $('#tk-note').value=TK.merchant||'';
     tkRefreshPay();
-  }else{
+    $('#tkRefWrap').classList.remove('hidden');$('#tk-ref-on').checked=false;$('#tk-ref-fields').classList.add('hidden');fillAccounts($('#tk-ref-acc'),(DB.accounts.find(a=>a.type==='Cuentas')||{}).name);$('#tk-ref-pct').value='';$('#tk-ref-amt').value='';$('#tk-ref-due').value=shiftMonthStr(localDate(),1);
+  }else{$('#tkRefWrap').classList.add('hidden');
     fill($('#tk-category'),DB.cats.expense,t.category);tkRefreshSub(t.sub);
     $('#tk-note').value=tkBaseNote(t.note,t);
   }
@@ -254,6 +255,9 @@ $('#tkSave').onclick=()=>{
     else{const rec={...pb,id:pid,date,amount:p.amount};if(p.items.length)rec.items=p.items;if(card&&payMonth){rec.dueMonth=payMonth;rec.purchaseDate=date;}DB.tx.push(rec);}
   });
   if(typeof commitItemLinks==='function')commitItemLinks(parts.flatMap(p=>p.items));
+  if(!TK.editId&&$('#tk-ref-on').checked){const pct=parseFloat($('#tk-ref-pct').value)||0;let ra=parseFloat($('#tk-ref-amt').value)||0;if(pct>0)ra=Math.round(total*pct/100*100)/100;
+    if(ra>0){const main=DB.tx.find(x=>x.ticketId===sid&&(!x.ticketPart||x.ticketPart[0]===1)&&(!x.inst||x.inst[0]===1));if(main)main.refund={pct:pct>0?pct:0,amount:ra,account:$('#tk-ref-acc').value,due:$('#tk-ref-due').value||localDate()};
+      createRefundIncome(sid,{amount:ra,account:$('#tk-ref-acc').value,due:$('#tk-ref-due').value||localDate(),note:'Reintegro '+(pct?pct+'% ':'')+(merchant||note)});}}
   if(TK.inboxId){inboxMarkDone([TK.inboxId],'done');TK.inboxId=null;INBOX_EDIT=null;}
   persist();$('#ticketScrim').classList.remove('on');cur=new Date(+date.slice(0,4),+date.slice(5,7)-1,1);
   if(TK.editId){render();if(detail&&detailRefresh)detailRefresh();}else setView('trans');

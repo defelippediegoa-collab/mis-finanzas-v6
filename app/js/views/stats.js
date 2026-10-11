@@ -1,7 +1,7 @@
 /* ---------- ESTADISTICAS ---------- */
 function renderStats(){
   const m=ym(cur);
-  const inc=DB.tx.filter(t=>t.type==='income'&&ymOf(t.date)===m&&isARS(t));
+  const inc=DB.tx.filter(t=>t.type==='income'&&!t.pending&&ymOf(t.date)===m&&isARS(t));
   const exp=DB.tx.filter(t=>t.type==='expense'&&ymOf(t.date)===m&&isARS(t));
   $('#st-inc').textContent=money(inc.reduce((s,t)=>s+t.amount,0));
   $('#st-exp').textContent=money(exp.reduce((s,t)=>s+t.amount,0));
@@ -54,7 +54,7 @@ function renderFlow(){
   const labs=[],incA=[],expA=[];
   for(let i=5;i>=0;i--){const d=new Date(cur.getFullYear(),cur.getMonth()-i,1),mm=ym(d);
     labs.push(d.toLocaleDateString('es-AR',{month:'short'}).replace('.',''));
-    incA.push(DB.tx.filter(t=>t.type==='income'&&ymOf(t.date)===mm&&isARS(t)).reduce((s,t)=>s+t.amount,0));
+    incA.push(DB.tx.filter(t=>t.type==='income'&&!t.pending&&ymOf(t.date)===mm&&isARS(t)).reduce((s,t)=>s+t.amount,0));
     expA.push(DB.tx.filter(t=>t.type==='expense'&&ymOf(t.date)===mm&&isARS(t)).reduce((s,t)=>s+t.amount,0));}
   const max=Math.max(1,...incA,...expA);
   const W=340,H=140,padX=10,padT=14,padB=20,n=6,gap=(W-2*padX)/n,bw=gap*0.30,plot=H-padT-padB;

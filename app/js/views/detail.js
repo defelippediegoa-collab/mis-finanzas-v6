@@ -12,7 +12,7 @@ function openAccountDetail(name){
   const inMonth=t=>(useVenc&&t.type==='expense'&&t.account===name)?payMonthOf(t)===m:ymOf(t.date)===m;
   const list=DB.tx.filter(t=>(t.account===name||t.from===name||t.to===name)&&inMonth(t)).sort((x,y)=>y.date.localeCompare(x.date));
   let dep=0,ret=0;
-  list.forEach(t=>{if(t.type==='income'&&t.account===name)dep+=t.amount;else if(t.type==='expense'&&t.account===name)ret+=t.amount;else if(t.type==='transfer'){if(t.to===name)dep+=(t.amountTo!=null?t.amountTo:t.amount);if(t.from===name)ret+=t.amount;}});
+  list.forEach(t=>{if(t.pending)return;if(t.type==='income'&&t.account===name)dep+=t.amount;else if(t.type==='expense'&&t.account===name)ret+=t.amount;else if(t.type==='transfer'){if(t.to===name)dep+=(t.amountTo!=null?t.amountTo:t.amount);if(t.from===name)ret+=t.amount;}});
   let h='';
   if(isCard){const s=cardSaldos(name);const tot=-totalOwed(name);
     h+='<div class="dhero"><div class="dl">'+name+' · deuda total</div><div class="dv neg">'+money(tot,c)+'</div>'+

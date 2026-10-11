@@ -31,11 +31,11 @@ function renderProjMonths(){
     // vencimientos de tarjeta = cuotas/consumos cuyo MES DE PAGO cae en este mes (las vas corrigiendo vos)
     const futCard=DB.tx.filter(t=>t.type==='expense'&&isCard(t.account)&&payMonthOf(t)===m);
     // resto a futuro (sueldos, préstamos, gastos no-tarjeta)
-    const futOther=DB.tx.filter(t=>!isCard(t.account)&&t.type!=='transfer'&&ymOf(t.date)===m&&new Date(t.date+'T12:00:00')>TODAY);
+    const futOther=DB.tx.filter(t=>!isCard(t.account)&&t.type!=='transfer'&&((ymOf(t.date)===m&&new Date(t.date+'T12:00:00')>TODAY)||(t.pending&&esMesActual&&new Date(t.date+'T12:00:00')<=TODAY)));
     const rems=DB.reminders.filter(r=>remActiveIn(r,m));
     const items=[
       ...futCard.map(t=>{const nt=((t.note||'').trim()||'—');const usd=(t.currency||'ARS')==='USD';const lab=nt+(t.inst&&!/\(\d+\/\d+\)/.test(nt)?(' ('+t.inst[0]+'/'+t.inst[1]+')'):'')+(usd?' (USD)':'');const key='tx:'+t.id;return {type:'expense',amt:toARS(t.amount,t.currency||'ARS')||0,key:key,paid:!!DB.paid[key],path:['💳 Vencimiento tarjeta', t.account, t.category||'Otros', t.sub||'—', lab]};}),
-      ...futOther.map(t=>{const usd=(t.currency||'ARS')==='USD';const key='tx:'+t.id;return {type:t.type,amt:toARS(t.amount,t.currency||'ARS')||0,key:key,paid:!!DB.paid[key],path:[t.category||'Otros', t.sub||'—', ((t.note||'').trim()||'—')+(usd?' (USD)':'')]};}),
+      ...futOther.map(t=>{const usd=(t.currency||'ARS')==='USD';const key='tx:'+t.id;return {type:t.type,amt:toARS(t.amount,t.currency||'ARS')||0,key:key,paid:!!DB.paid[key],path:[t.category||'Otros', t.sub||'—', ((t.note||'').trim()||'—')+(t.pending?(new Date(t.date+'T12:00:00')<=TODAY?' (reintegro atrasado)':' (pendiente)'):'')+(usd?' (USD)':'')]};}),
       ...rems.map(r=>{const rc=curOf(r.account)||'ARS';const usd=rc==='USD';const key='rem:'+r.id+':'+m;return {type:r.type,amt:toARS(remAmount(r,m),rc)||0,key:key,paid:!!DB.paid[key],path:[r.category||'Recordatorios', r.sub||'—', (r.name||'recordatorio')+' (recordatorio)'+(usd?' (USD)':'')]};})
     ];
     let inc=0,exp=0;items.forEach(it=>{if(it.paid)return;if(it.type==='income')inc+=it.amt;else exp+=it.amt;});running+=inc-exp;

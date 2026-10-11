@@ -1,6 +1,6 @@
 /* ---------- storage ---------- */
 // v6: los datos viven en fin_db_v5 (se sincronizan); la configuración del dispositivo en fin_cfg_v5 (nunca viaja).
-const APP_VERSION='6.5.0';
+const APP_VERSION='6.6.0';
 const KEY='fin_db_v5',KEY_V4='fin_db_v4',CFG_KEY='fin_cfg_v5';
 const DEF_CFG={syncUrl:'',syncToken:'',syncAuto:false,aiModel:'',aiEffort:'low',inboxDoneQueue:[],lastInboxPoll:0,priceBasis:'paid'};
 const CFG=(()=>{try{return Object.assign({},DEF_CFG,JSON.parse(localStorage.getItem(CFG_KEY)||'{}'));}catch(e){return Object.assign({},DEF_CFG);}})();
@@ -50,7 +50,7 @@ function normalize(d,opts){opts=opts||{};
   if(d.syncUrl!==undefined||d.syncAuto!==undefined){
     if(opts.takeSync&&d.syncUrl&&!CFG.syncUrl){CFG.syncUrl=d.syncUrl;CFG.syncAuto=!!d.syncAuto;saveCfg();}
     delete d.syncUrl;delete d.syncAuto;}
-  d.updatedAt=d.updatedAt||0;d.paid=d.paid||{};d.schema=5;d.rules=Array.isArray(d.rules)?d.rules:[];
+  d.updatedAt=d.updatedAt||0;d.paid=d.paid||{};d.schema=5;d.rules=Array.isArray(d.rules)?d.rules:[];d.loans=Array.isArray(d.loans)?d.loans:[];
   d.cats=d.cats||JSON.parse(JSON.stringify(DEF_CATS));d.subs=d.subs||JSON.parse(JSON.stringify(DEF_SUBS));
   d.accounts=d.accounts||[];
   const known=new Set(d.accounts.map(a=>a.name));

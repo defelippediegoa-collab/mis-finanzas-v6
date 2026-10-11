@@ -29,8 +29,8 @@ function accountNames(){return DB.accounts.map(a=>a.name);}
 function fill(sel,opts,sel0){sel.innerHTML=opts.map(o=>'<option'+(o===sel0?' selected':'')+'>'+o+'</option>').join('');}
 // Cuentas agrupadas por origen en los desplegables
 function fillAccounts(sel,sel0,extraFirst){
-  const order=['Efectivo','Cuentas','Tarjetas de débito','Tarjetas de crédito','Ahorros','Inversiones','Otros'];
-  const lab={'Efectivo':'💵 Efectivo','Cuentas':'🏦 Bancos / Cuentas','Tarjetas de débito':'💳 Tarjetas de débito','Tarjetas de crédito':'💳 Tarjetas de crédito','Ahorros':'🐷 Ahorros','Inversiones':'📈 Inversiones','Otros':'📦 Otros'};
+  const order=['Efectivo','Cuentas','Tarjetas de débito','Tarjetas de crédito','Ahorros','Inversiones','Préstamo','Otros'];
+  const lab={'Efectivo':'💵 Efectivo','Cuentas':'🏦 Bancos / Cuentas','Tarjetas de débito':'💳 Tarjetas de débito','Tarjetas de crédito':'💳 Tarjetas de crédito','Ahorros':'🐷 Ahorros','Inversiones':'📈 Inversiones','Préstamo':'🏦 Préstamos','Otros':'📦 Otros'};
   sel.innerHTML='';
   if(extraFirst){const o=document.createElement('option');o.value=extraFirst;o.textContent=extraFirst;if(sel0===extraFirst||!sel0)o.selected=true;sel.appendChild(o);}
   const types=[...order.filter(t=>DB.accounts.some(a=>a.type===t)),...[...new Set(DB.accounts.map(a=>a.type))].filter(t=>!order.includes(t))];

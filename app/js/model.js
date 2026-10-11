@@ -1,8 +1,13 @@
 /* ---------- balances ---------- */
-function effects(name,filter){let s=0;DB.tx.forEach(t=>{if(t.hist)return;if(filter&&!filter(t))return;
+// Un movimiento "pendiente" (reintegro que todavía no llegó) no mueve saldos ni estadísticas hasta confirmarlo.
+function effects(name,filter){let s=0;DB.tx.forEach(t=>{if(t.hist||t.pending)return;if(filter&&!filter(t))return;
   if(t.type==='income'&&t.account===name)s+=t.amount;
   else if(t.type==='expense'&&t.account===name)s-=t.amount;
   else if(t.type==='transfer'){if(t.to===name)s+=(t.amountTo!=null?t.amountTo:t.amount);if(t.from===name)s-=t.amount;}});return s;}
+// Reintegro: ingreso pendiente "Por Devoluciones" ligado al gasto (por id) o al ticket (por ticketId)
+function createRefundIncome(refOf,o){if(!DB.cats.income.includes('Por Devoluciones'))DB.cats.income.push('Por Devoluciones');
+  const rec={id:'u'+Date.now()+'r'+Math.floor(Math.random()*900),date:o.due||localDate(),type:'income',account:o.account,category:'Por Devoluciones',sub:'',amount:Math.round(o.amount*100)/100,currency:curOf(o.account),note:o.note||'Reintegro',pending:true,refundOf:refOf,source:'app',createdAt:Date.now()};DB.tx.push(rec);return rec;}
+function refundFor(t){if(!t)return null;return DB.tx.find(x=>x.refundOf&&(x.refundOf===t.id||(t.ticketId&&x.refundOf===t.ticketId)))||null;}
 function toARS(b,c){return c==='ARS'?b:(c==='USD'?b*(DB.usdRate||1000):null);}
 function convertAmt(amount,fromCur,toCur,rate){if(fromCur===toCur)return amount;if(fromCur==='ARS'&&toCur==='USD')return Math.round(amount/rate*100)/100;if(fromCur==='USD'&&toCur==='ARS')return Math.round(amount*rate*100)/100;return amount;}
 function liveBalance(name){const a=acct(name);const init=a?(a.initial||0):0;return init+effects(name,t=>new Date(t.date+'T12:00:00')<=TODAY);}
