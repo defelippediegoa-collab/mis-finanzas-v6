@@ -101,14 +101,26 @@ function openKindDetail(key,variety){const k=kindsIndex().get(key);if(!k)return;
 // ---- formulario de edición de un producto (nombre, tipo, variedad, marca, tamaño, unidad) ----
 let _pe=null;
 function openProductEdit(pid){const p=productById(pid);return new Promise(res=>{if(!p){res(false);return;}_pe={pid,res};
-  $('#pe-name').value=p.name;$('#pe-kind').value=p.kind||'';$('#pe-variety').value=p.variety||'';$('#pe-brand').value=p.brand||'';$('#pe-size').value=p.size||'';$('#pe-unit').value=p.unit||'u';
-  $('#pe-kinds').innerHTML=kindNames().map(k=>'<option value="'+esc(k)+'">').join('');$('#pe-brands').innerHTML=[...new Set(activeProducts().map(x=>x.brand).filter(Boolean))].sort().map(b=>'<option value="'+esc(b)+'">').join('');
-  $('#peKindHint').textContent=kindNames().length?('Tipos que ya usás: '+kindNames().slice(0,12).join(', ')+(kindNames().length>12?'…':'')):'';
+  $('#pe-name').value=p.name;$('#pe-size').value=p.size||'';$('#pe-unit').value=p.unit||'u';comboFillAll('pe',p);
   $('#prodEditScrim').classList.add('on');});}
 function peDone(ok){const d=_pe;_pe=null;$('#prodEditScrim').classList.remove('on');if(d)d.res(ok);}
 $('#peOk').onclick=()=>{if(!_pe)return;const name=$('#pe-name').value.trim();if(!name){toast('Poné un nombre');return;}
-  updateProduct(_pe.pid,{name,kind:$('#pe-kind').value,variety:$('#pe-variety').value,brand:$('#pe-brand').value,size:$('#pe-size').value,unit:$('#pe-unit').value});toast('Producto actualizado');peDone(true);};
+  updateProduct(_pe.pid,{name,kind:comboVal('pe','kind'),variety:comboVal('pe','variety'),brand:comboVal('pe','brand'),size:$('#pe-size').value,unit:$('#pe-unit').value});toast('Producto actualizado');peDone(true);};
 $('#closePE').onclick=()=>peDone(false);$('#prodEditScrim').onclick=e=>{if(e.target===$('#prodEditScrim'))peDone(false);};
+
+// ---- combos (select con valores existentes + "Nuevo…") para tipo / variedad / marca ----
+const COMBO_NEW='__new__';
+function comboSet(pre,field,values,current){const sel=$('#'+pre+'-'+field+'-sel'),inp=$('#'+pre+'-'+field);const cur=(current||'').trim();
+  const vals=[...new Set(values.filter(Boolean))];if(cur&&!vals.some(v=>v.toLowerCase()===cur.toLowerCase()))vals.push(cur);vals.sort((a,b)=>a.localeCompare(b,'es'));
+  sel.innerHTML='<option value="">— sin '+(field==='kind'?'tipo':field==='variety'?'variedad':'marca')+' —</option>'+vals.map(v=>'<option value="'+esc(v)+'"'+(v.toLowerCase()===cur.toLowerCase()?' selected':'')+'>'+esc(v)+'</option>').join('')+'<option value="'+COMBO_NEW+'">＋ Nuevo…</option>';
+  inp.value='';inp.classList.add('hidden');
+  sel.onchange=()=>{const isNew=sel.value===COMBO_NEW;inp.classList.toggle('hidden',!isNew);if(isNew){inp.value='';setTimeout(()=>inp.focus(),30);}if(field==='kind')comboVarietyFor(pre);};}
+function comboVal(pre,field){const sel=$('#'+pre+'-'+field+'-sel');return sel.value===COMBO_NEW?$('#'+pre+'-'+field).value.trim():sel.value;}
+function varietiesOf(kind){const k=normKey(kind);return [...new Set(activeProducts().filter(p=>!k||kindKey(p)===k).map(p=>p.variety).filter(Boolean))];}
+function brandsAll(){return [...new Set(activeProducts().map(p=>p.brand).filter(Boolean))];}
+// Al cambiar el tipo, la variedad muestra solo las de ese tipo (todas si el tipo es nuevo o vacío)
+function comboVarietyFor(pre){const kind=comboVal(pre,'kind');const cur=comboVal(pre,'variety');const vals=varietiesOf(kind);const keep=vals.length?(vals.some(v=>v.toLowerCase()===cur.toLowerCase())?cur:''):cur;comboSet(pre,'variety',vals.length?vals:varietiesOf(''),keep);}
+function comboFillAll(pre,p){comboSet(pre,'kind',kindNames(),p.kind);const vals=varietiesOf(p.kind);comboSet(pre,'variety',vals.length?vals:varietiesOf(''),p.variety);comboSet(pre,'brand',brandsAll(),p.brand);}
 
 // ---- picker: elegir o crear producto para una descripción ----
 let _pp=null;
@@ -127,14 +139,13 @@ function ppRender(){if(!_pp)return;const o=_pp.opts;const q=$('#ppSearch').value
 function ppPick(pid){const o=_pp.opts;const also=[];if(o.alsoCandidates){o.alsoCandidates.forEach(c=>{const p=productById(pid);if(p&&scoreDesc(c.desc,p)>=0.75)also.push(c.key);});}ppDone({productId:pid,alsoKeys:also});}
 $('#ppSearch').oninput=ppRender;
 $('#ppCreateBtn').onclick=()=>{const o=_pp.opts;const f=$('#ppCreate');f.classList.remove('hidden');const d=o.desc||$('#ppSearch').value;const mk=suggestTaxonomy(d);const T=pTokens(d);
-  $('#pp-name').value=o.newDefaults&&o.newDefaults.name||ppTitleCase(d);$('#pp-kind').value=o.newDefaults&&o.newDefaults.kind||mk.kind;$('#pp-variety').value=o.newDefaults&&o.newDefaults.variety||mk.variety;$('#pp-brand').value=o.newDefaults&&o.newDefaults.brand||'';
+  $('#pp-name').value=o.newDefaults&&o.newDefaults.name||ppTitleCase(d);comboFillAll('pp',{kind:o.newDefaults&&o.newDefaults.kind||mk.kind,variety:o.newDefaults&&o.newDefaults.variety||mk.variety,brand:o.newDefaults&&o.newDefaults.brand||''});
   $('#pp-size').value=o.newDefaults&&o.newDefaults.size||(T.size?(T.size.u==='g'?(T.size.n>=1000?(T.size.n/1000)+' kg':T.size.n+' g'):(T.size.n>=1000?(T.size.n/1000)+' l':T.size.n+' ml'))+(T.pack?' x'+T.pack:''):(T.pack?'x'+T.pack:''));
   $('#pp-unit').value=o.newDefaults&&o.newDefaults.unit||o.unit||'u';
-  $('#pp-kinds').innerHTML=[...kindsIndex().values()].map(k=>'<option value="'+esc(k.kind)+'">').join('');$('#pp-brands').innerHTML=[...new Set(activeProducts().map(p=>p.brand).filter(Boolean))].sort().map(b=>'<option value="'+esc(b)+'">').join('');
   $('#pp-name').focus();};
 function ppTitleCase(s){const t=normKey(s).split(' ').map(w=>P_ABBR[w]||w).join(' ');return t.replace(/(^|\s)\S/g,c=>c.toUpperCase());}
 $('#ppCreateOk').onclick=()=>{const name=$('#pp-name').value.trim();if(!name){toast('Poné un nombre');return;}const o=_pp.opts;
-  const p=createProduct({name,kind:$('#pp-kind').value,variety:$('#pp-variety').value,brand:$('#pp-brand').value,size:$('#pp-size').value,unit:$('#pp-unit').value,source:'manual'});
+  const p=createProduct({name,kind:comboVal('pp','kind'),variety:comboVal('pp','variety'),brand:comboVal('pp','brand'),size:$('#pp-size').value,unit:$('#pp-unit').value,source:'manual'});
   ppPick(p.id);};
 $('#ppUnlink').onclick=()=>ppDone({productId:null,unlink:true});
 $('#closePP').onclick=()=>ppDone(null);$('#prodPickScrim').onclick=e=>{if(e.target===$('#prodPickScrim'))ppDone(null);};
