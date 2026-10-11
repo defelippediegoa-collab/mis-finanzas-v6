@@ -95,7 +95,7 @@ function openKindDetail(key,variety){const k=kindsIndex().get(key);if(!k)return;
   $('#cardDetTitle').textContent=k.kind+(vLabel?' › '+vLabel:'');$('#cardDetBody').innerHTML=h;$('#cardDetScrim').classList.add('on');
   $('#cardDetBody').querySelectorAll('.debtrow[data-id]').forEach(el=>el.onclick=()=>openProductDetail(el.dataset.id));
   $('#cardDetBody').querySelectorAll('.catrow[data-var]').forEach(el=>el.onclick=()=>openKindDetail(key,el.dataset.var));
-  $('#kdRename').onclick=()=>{const kind=prompt('Nuevo nombre del tipo (se aplica a sus '+k.products.length+' productos)',k.kind);if(kind===null||!kind.trim())return;renameKind(key,{kind});$('#cardDetScrim').classList.remove('on');renderProductsList();};
+  $('#kdRename').onclick=()=>{askText('Nuevo nombre del tipo (se aplica a sus '+k.products.length+' productos)',k.kind).then(kind=>{if(kind===null||!kind.trim())return;renameKind(key,{kind});$('#cardDetScrim').classList.remove('on');if(detail)renderProductsList();});};
 }
 
 // ---- formulario de edición de un producto (nombre, tipo, variedad, marca, tamaño, unidad) ----

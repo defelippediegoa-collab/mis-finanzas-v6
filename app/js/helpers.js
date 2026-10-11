@@ -45,12 +45,21 @@ function fillCats(sel,kind,sel0,dash){fill(sel,[...(dash?['—']:[]),...DB.cats[
 function fillSubs(sel,cat,sel0){fill(sel,['—',...((cat&&cat!=='—'&&DB.subs[cat])||[])],sel0||'—');sel.insertAdjacentHTML('beforeend','<option value="'+NEW_OPT+'">＋ Nueva subcategoría…</option>');sel._kind=null;sel._catOf=cat;inlineNewInit(sel);}
 function inlineNewInit(sel){if(sel._inlineNew)return;sel._inlineNew=true;
   sel.addEventListener('focus',()=>{if(sel.value!==NEW_OPT)sel._prev=sel.value;});
-  sel.addEventListener('change',e=>{if(sel.value!==NEW_OPT)return;
-    const isCat=!!sel._kind;const name=(prompt(isCat?'Nombre de la categoría nueva':'Nombre de la subcategoría nueva (dentro de "'+sel._catOf+'")')||'').trim();
-    const revert=()=>{sel.value=(sel._prev&&sel._prev!==NEW_OPT)?sel._prev:sel.options[0].value;e.stopImmediatePropagation();setTimeout(()=>sel.dispatchEvent(new Event('change')),0);};
-    if(!name)return revert();
-    if(isCat){if(!DB.cats[sel._kind].includes(name))DB.cats[sel._kind].push(name);DB.subs[name]=DB.subs[name]||[];fillCats(sel,sel._kind,name,sel._dash);}
-    else{const c=sel._catOf;if(!c||c==='—'){toast('Elegí primero la categoría');return revert();}DB.subs[c]=DB.subs[c]||[];if(!DB.subs[c].includes(name))DB.subs[c].push(name);fillSubs(sel,c,name);}
-    persist();toast((isCat?'Categoría':'Subcategoría')+' "'+name+'" creada');},true);}
+  sel.addEventListener('change',e=>{if(sel.value!==NEW_OPT){sel._prev=sel.value;return;}
+    e.stopImmediatePropagation();
+    const isCat=!!sel._kind;const prev=(sel._prev&&sel._prev!==NEW_OPT)?sel._prev:sel.options[0].value;sel.value=prev;
+    if(!isCat&&(!sel._catOf||sel._catOf==='—')){toast('Elegí primero la categoría');sel.dispatchEvent(new Event('change'));return;}
+    askText(isCat?'Nueva categoría':'Nueva subcategoría en "'+sel._catOf+'"','',isCat?'Ej: Mascotas':'Ej: Alimento').then(name=>{name=(name||'').trim();
+      if(!name){sel.dispatchEvent(new Event('change'));return;}
+      if(isCat){if(!DB.cats[sel._kind].includes(name))DB.cats[sel._kind].push(name);DB.subs[name]=DB.subs[name]||[];fillCats(sel,sel._kind,name,sel._dash);}
+      else{const c=sel._catOf;DB.subs[c]=DB.subs[c]||[];if(!DB.subs[c].includes(name))DB.subs[c].push(name);fillSubs(sel,c,name);}
+      persist();toast((isCat?'Categoría':'Subcategoría')+' "'+name+'" creada');sel.dispatchEvent(new Event('change'));});},true);}
+// Ventana propia para pedir un texto (el prompt() nativo no siempre se abre en la app instalada de Android)
+let _ask=null;
+function askText(title,def,placeholder){return new Promise(res=>{if(_ask)_ask(null);_ask=res;$('#askTitle').textContent=title;const i=$('#askInput');i.value=def||'';i.placeholder=placeholder||'';$('#askScrim').classList.add('on');setTimeout(()=>{i.focus();try{i.select();}catch(e){}},80);});}
+function askDone(v){const r=_ask;_ask=null;$('#askScrim').classList.remove('on');if(r)r(v);}
+$('#askOk').onclick=()=>askDone($('#askInput').value);$('#askX').onclick=()=>askDone(null);
+$('#askInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();askDone($('#askInput').value);}};
+$('#askScrim').onclick=e=>{if(e.target===$('#askScrim'))askDone(null);};
 function isARS(t){return (t.currency||'ARS')==='ARS';}
 
