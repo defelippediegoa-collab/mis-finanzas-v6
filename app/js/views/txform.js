@@ -18,7 +18,7 @@ function openSheet(id,preset){
   document.querySelectorAll('#paySeg button').forEach(b=>b.classList.toggle('on',b.dataset.p==='once'));
   refreshType();
   const src=t||preset||{};
-  if(fType!=='transfer'){fill($('#f-category'),DB.cats[fType==='income'?'income':'expense'],src.category);refreshSub(src.sub);fillAccounts($('#f-account'),src.account);if(fType==='expense'&&isCard(src.account))$('#f-paymonth').value=src.dueMonth||(src.date?ymOf(src.date):nx);}
+  if(fType!=='transfer'){fillCats($('#f-category'),fType==='income'?'income':'expense',src.category);refreshSub(src.sub);fillAccounts($('#f-account'),src.account);if(fType==='expense'&&isCard(src.account))$('#f-paymonth').value=src.dueMonth||(src.date?ymOf(src.date):nx);}
   if(fType==='transfer'){fillAccounts($('#f-account'),t?t.from:(preset?preset.from:undefined));fillAccounts($('#f-to'),t?t.to:(preset?preset.to:undefined));}
   refreshPayUI();refreshFx();setAmtLabel();refundUI(t);$('#scrim').classList.add('on');
 }
@@ -45,9 +45,9 @@ function applyRefund(t,refOf,amtTotal){const on=$('#f-ref-on').checked;const lin
   const v=refundVals(amtTotal);if(!(v.amount>0))return;t.refund=v;
   if(linked){if(linked.pending){linked.amount=v.amount;linked.account=v.account;linked.currency=curOf(v.account);linked.date=v.due;linked.updatedAt=Date.now();}}
   else createRefundIncome(refOf,{amount:v.amount,account:v.account,due:v.due,note:'Reintegro '+(v.pct?v.pct+'% ':'')+(t.merchant||stripInst(t.note)||t.category||'')});}
-function refreshType(){const tr=fType==='transfer';$('#f-to-wrap').classList.toggle('hidden',!tr);$('#f-cat-wrap').classList.toggle('hidden',tr);$('#f-sub-wrap').classList.toggle('hidden',tr);$('#f-note-wrap').classList.remove('hidden');$('#f-tags-wrap').classList.remove('hidden');$('#f-acc-lbl').textContent=tr?'Desde':'Cuenta';if(!tr){fill($('#f-category'),DB.cats[fType==='income'?'income':'expense']);refreshSub();}refreshPayUI();refreshFx();}
+function refreshType(){const tr=fType==='transfer';$('#f-to-wrap').classList.toggle('hidden',!tr);$('#f-cat-wrap').classList.toggle('hidden',tr);$('#f-sub-wrap').classList.toggle('hidden',tr);$('#f-note-wrap').classList.remove('hidden');$('#f-tags-wrap').classList.remove('hidden');$('#f-acc-lbl').textContent=tr?'Desde':'Cuenta';if(!tr){fillCats($('#f-category'),fType==='income'?'income':'expense');refreshSub();}refreshPayUI();refreshFx();}
 function refreshPayUI(){const card=fType==='expense'&&isCard($('#f-account').value);$('#payModeWrap').classList.toggle('hidden',!card);if(!card){fPay='once';$('#onceExtra').classList.add('hidden');$('#instExtra').classList.add('hidden');$('#subExtra').classList.add('hidden');return;}$('#onceExtra').classList.toggle('hidden',fPay!=='once');$('#instExtra').classList.toggle('hidden',fPay!=='inst');$('#subExtra').classList.toggle('hidden',fPay!=='sub');}
-function refreshSub(s0){const cat=$('#f-category').value;fill($('#f-sub'),['—',...(DB.subs[cat]||[])],s0||'—');}
+function refreshSub(s0){const cat=$('#f-category').value;fillSubs($('#f-sub'),cat,s0);}
 function setAmtLabel(){const n=parseInt($('#f-inst').value)||1,amt=parseFloat($('#f-amount').value)||0;if(fType==='expense'&&fPay==='inst'){$('#amtLbl').textContent='Importe total';$('#amtHint').classList.remove('hidden');$('#amtHint').textContent=n>1?('= '+money(amt/n)+' por cuota ('+n+')'):'';}else{$('#amtLbl').textContent='Importe';$('#amtHint').classList.add('hidden');}}
 function refreshFx(){if(fType!=='transfer'){$('#fxExtra').classList.add('hidden');return;}const fc=curOf($('#f-account').value),tc=curOf($('#f-to').value);const cross=fc&&tc&&fc!==tc;$('#fxExtra').classList.toggle('hidden',!cross);if(cross){if(!$('#f-rate').value)$('#f-rate').value=DB.usdRate;const amt=parseFloat($('#f-amount').value)||0,rate=parseFloat($('#f-rate').value)||DB.usdRate;$('#fxToLbl').textContent='Recibe ('+tc+')';$('#f-amountto').value=money(convertAmt(amt,fc,tc,rate),tc);$('#fxHint').textContent='Cambio de '+fc+' a '+tc+'.';}}
 $('#f-amount').oninput=()=>{setAmtLabel();refreshFx();};$('#f-inst').oninput=setAmtLabel;$('#f-rate').oninput=refreshFx;$('#f-category').onchange=()=>refreshSub();

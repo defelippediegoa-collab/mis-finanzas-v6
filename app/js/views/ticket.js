@@ -18,7 +18,7 @@ function openTicket(preset){ // preset opcional: {file} (desde Compartir) | {edi
     tkDefaultDiscountModes();
     TK.merchant=d.merchant||'';TK.date=d.date||localDate();TK.total=typeof d.amount==='number'?d.amount:null;TK.currency=d.currency||'ARS';TK.warnings=d.warnings||[];
     $('#tkPick').classList.add('hidden');tkShowForm();tkAutoLink(false);
-    if(d.account)fillAccounts($('#tk-account'),d.account);if(d.category){fill($('#tk-category'),DB.cats.expense,d.category);tkRefreshSub(d.sub);}if(d.note)$('#tk-note').value=d.note;tkRefreshPay();return;}
+    if(d.account)fillAccounts($('#tk-account'),d.account);if(d.category){fillCats($('#tk-category'),'expense',d.category);tkRefreshSub(d.sub);}if(d.note)$('#tk-note').value=d.note;tkRefreshPay();return;}
 }
 function tkItem(o){return{desc:o.desc||'',qty:typeof o.qty==='number'&&o.qty>0?o.qty:1,unit:o.unit||'u',unitPrice:typeof o.unitPrice==='number'?o.unitPrice:null,amount:typeof o.amount==='number'?o.amount:0,discount:!!o.discount,dmode:o.dmode||'line',cat:o.cat||null,pos:o.pos,productId:o.productId||null,_m:null};}
 // Vincula los ítems a productos: alias exacto/heurística al instante; IA en segundo plano si está disponible (nunca bloquea Guardar)
@@ -103,18 +103,18 @@ function tkShowForm(t){
     const nx=ym(new Date(TODAY.getFullYear(),TODAY.getMonth()+1,1));$('#tk-paymonth').value=nx;$('#tk-due').value=nx;$('#tk-inst').value='3';TK.pay='once';
     document.querySelectorAll('#tkPaySeg button').forEach(b=>b.classList.toggle('on',b.dataset.p==='once'));
     const def=defaultCatForTicket(TK.merchant,'');
-    fill($('#tk-category'),DB.cats.expense,def.category);tkRefreshSub(def.sub);
+    fillCats($('#tk-category'),'expense',def.category);tkRefreshSub(def.sub);
     $('#tk-note').value=TK.merchant||'';
     tkRefreshPay();
     $('#tkRefWrap').classList.remove('hidden');$('#tk-ref-on').checked=false;$('#tk-ref-fields').classList.add('hidden');fillAccounts($('#tk-ref-acc'),(DB.accounts.find(a=>a.type==='Cuentas')||{}).name);$('#tk-ref-pct').value='';$('#tk-ref-amt').value='';$('#tk-ref-due').value=shiftMonthStr(localDate(),1);
   }else{$('#tkRefWrap').classList.add('hidden');
-    fill($('#tk-category'),DB.cats.expense,t.category);tkRefreshSub(t.sub);
+    fillCats($('#tk-category'),'expense',t.category);tkRefreshSub(t.sub);
     $('#tk-note').value=tkBaseNote(t.note,t);
   }
   tkRenderItems();
 }
 function tkBaseNote(note,t){let n=stripInst(note||'');if(t&&t.ticketPart&&t.category){const suf=' · '+t.category;if(n.endsWith(suf))n=n.slice(0,-suf.length);}return n.trim();}
-function tkRefreshSub(s0){const cat=$('#tk-category').value;fill($('#tk-sub'),['—',...(DB.subs[cat]||[])],s0||'—');}
+function tkRefreshSub(s0){const cat=$('#tk-category').value;fillSubs($('#tk-sub'),cat,s0);}
 function tkRefreshPay(){const card=isCard($('#tk-account').value);$('#tkCard').classList.toggle('hidden',!card);if(!card)return;$('#tkOnce').classList.toggle('hidden',TK.pay!=='once');$('#tkInst').classList.toggle('hidden',TK.pay!=='inst');}
 $('#tk-account').onchange=tkRefreshPay;$('#tk-category').onchange=()=>{tkRefreshSub();tkRenderItems();};$('#tk-sub').onchange=()=>tkRenderItems();
 document.querySelectorAll('#tkPaySeg button').forEach(b=>b.onclick=()=>{TK.pay=b.dataset.p;document.querySelectorAll('#tkPaySeg button').forEach(x=>x.classList.toggle('on',x===b));tkRefreshPay();});
@@ -189,12 +189,12 @@ $('#tkAdd').onclick=()=>{TK.items.push(tkItem({}));tkRenderItems();const rows=$(
 // ---- categoría por ítem ----
 let _tkCatK=null;
 function openTkCatPicker(k){_tkCatK=k;const it=TK.items[k];const gcat=$('#tk-category').value;
-  fill($('#tkc-cat'),DB.cats.expense,it.cat?it.cat.category:gcat);tkcSub(it.cat?it.cat.sub:'');
+  fillCats($('#tkc-cat'),'expense',it.cat?it.cat.category:gcat);tkcSub(it.cat?it.cat.sub:'');
   $('#tkcItem').textContent=it.desc||'Ítem';
   const others=TK.items.map((x,j)=>({x,j})).filter(o=>o.j!==k&&!o.x.discount);
   $('#tkcOthers').innerHTML=others.length?'<div class="hint" style="margin:8px 0 4px">También aplicar a:</div>'+others.map(o=>'<label class="tkcrow"><input type="checkbox" data-j="'+o.j+'"> '+esc(o.x.desc||'Ítem')+'</label>').join(''):'';
   $('#tkCatScrim').classList.add('on');}
-function tkcSub(s0){fill($('#tkc-sub'),['—',...(DB.subs[$('#tkc-cat').value]||[])],s0||'—');}
+function tkcSub(s0){fillSubs($('#tkc-sub'),$('#tkc-cat').value,s0);}
 $('#tkc-cat').onchange=()=>tkcSub();
 function tkcApply(cat){const ks=[_tkCatK,...[...$('#tkcOthers').querySelectorAll('input:checked')].map(c=>+c.dataset.j)];ks.forEach(j=>{if(TK.items[j])TK.items[j].cat=cat;});$('#tkCatScrim').classList.remove('on');tkRenderItems();}
 $('#tkcOk').onclick=()=>{const sub=$('#tkc-sub').value==='—'?'':$('#tkc-sub').value;tkcApply({category:$('#tkc-cat').value,sub});};

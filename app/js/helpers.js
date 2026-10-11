@@ -39,5 +39,18 @@ function fillAccounts(sel,sel0,extraFirst){
     accs.forEach(a=>{const o=document.createElement('option');o.value=a.name;o.textContent=a.name;if(a.name===sel0)o.selected=true;og.appendChild(o);});
     sel.appendChild(og);});
 }
+// Desplegables de categoría / subcategoría con "＋ Nueva…" al final: crean la categoría o subcategoría en el momento.
+const NEW_OPT='__new__';
+function fillCats(sel,kind,sel0,dash){fill(sel,[...(dash?['—']:[]),...DB.cats[kind]],sel0);sel.insertAdjacentHTML('beforeend','<option value="'+NEW_OPT+'">＋ Nueva categoría…</option>');sel._kind=kind;sel._catOf=null;sel._dash=!!dash;inlineNewInit(sel);}
+function fillSubs(sel,cat,sel0){fill(sel,['—',...((cat&&cat!=='—'&&DB.subs[cat])||[])],sel0||'—');sel.insertAdjacentHTML('beforeend','<option value="'+NEW_OPT+'">＋ Nueva subcategoría…</option>');sel._kind=null;sel._catOf=cat;inlineNewInit(sel);}
+function inlineNewInit(sel){if(sel._inlineNew)return;sel._inlineNew=true;
+  sel.addEventListener('focus',()=>{if(sel.value!==NEW_OPT)sel._prev=sel.value;});
+  sel.addEventListener('change',e=>{if(sel.value!==NEW_OPT)return;
+    const isCat=!!sel._kind;const name=(prompt(isCat?'Nombre de la categoría nueva':'Nombre de la subcategoría nueva (dentro de "'+sel._catOf+'")')||'').trim();
+    const revert=()=>{sel.value=(sel._prev&&sel._prev!==NEW_OPT)?sel._prev:sel.options[0].value;e.stopImmediatePropagation();setTimeout(()=>sel.dispatchEvent(new Event('change')),0);};
+    if(!name)return revert();
+    if(isCat){if(!DB.cats[sel._kind].includes(name))DB.cats[sel._kind].push(name);DB.subs[name]=DB.subs[name]||[];fillCats(sel,sel._kind,name,sel._dash);}
+    else{const c=sel._catOf;if(!c||c==='—'){toast('Elegí primero la categoría');return revert();}DB.subs[c]=DB.subs[c]||[];if(!DB.subs[c].includes(name))DB.subs[c].push(name);fillSubs(sel,c,name);}
+    persist();toast((isCat?'Categoría':'Subcategoría')+' "'+name+'" creada');},true);}
 function isARS(t){return (t.currency||'ARS')==='ARS';}
 

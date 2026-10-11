@@ -3,7 +3,7 @@ let rType='expense';
 function openRem(id){remEditId=id||null;$('#remTitle').textContent=id?'Editar recordatorio':'Nuevo recordatorio';$('#delRem').classList.toggle('hidden',!id);
   const r=id?DB.reminders.find(x=>x.id===id):null;rType=r?r.type:'expense';
   document.querySelectorAll('#remTypeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===rType));
-  fill($('#r-category'),['—',...DB.cats[rType==='income'?'income':'expense']],r?r.category:'—');
+  fillCats($('#r-category'),rType==='income'?'income':'expense',r?r.category:'—',true);
   refreshRemSub(r&&r.sub?r.sub:'—');
   $('#r-name').value=r?r.name:'';$('#r-amount').value=r?r.amount:'';$('#r-freq').value=r?r.freq:'monthly';
   $('#r-from').value=r&&r.from?r.from:ym(new Date(TODAY.getFullYear(),TODAY.getMonth()+1,1));$('#r-until').value=r&&r.until?r.until:'';
@@ -17,9 +17,9 @@ function renderRemChanges(){const box=$('#r-changes');box.innerHTML=remChanges.m
   box.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{const i=+inp.dataset.i,k=inp.dataset.k;remChanges[i][k]=k==='amount'?(parseFloat(inp.value)||''):inp.value;});
   box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{remChanges.splice(+b.dataset.del,1);renderRemChanges();});}
 $('#addChange').onclick=()=>{remChanges.push({from:'',amount:''});renderRemChanges();};
-function refreshRemSub(sel){const cat=$('#r-category').value;const list=(cat&&cat!=='—'&&DB.subs[cat])?DB.subs[cat]:[];fill($('#r-sub'),['—',...list],sel||'—');}
+function refreshRemSub(sel){const cat=$('#r-category').value;fillSubs($('#r-sub'),cat,sel);}
 $('#r-category').onchange=()=>refreshRemSub('—');
-document.querySelectorAll('#remTypeSeg button').forEach(b=>b.onclick=()=>{rType=b.dataset.t;document.querySelectorAll('#remTypeSeg button').forEach(x=>x.classList.toggle('on',x===b));fill($('#r-category'),['—',...DB.cats[rType==='income'?'income':'expense']]);refreshRemSub('—');});
+document.querySelectorAll('#remTypeSeg button').forEach(b=>b.onclick=()=>{rType=b.dataset.t;document.querySelectorAll('#remTypeSeg button').forEach(x=>x.classList.toggle('on',x===b));fillCats($('#r-category'),rType==='income'?'income':'expense',undefined,true);refreshRemSub('—');});
 $('#addRem').onclick=()=>openRem(null);$('#closeRem').onclick=()=>$('#remScrim').classList.remove('on');$('#remScrim').onclick=e=>{if(e.target===$('#remScrim'))$('#remScrim').classList.remove('on');};
 $('#saveRem').onclick=()=>{const name=$('#r-name').value.trim(),amt=parseFloat($('#r-amount').value);if(!name){toast('Poné un nombre');return;}if(!amt||amt<=0){toast('Poné un importe');return;}
   const acc=$('#r-account').value==='— sin cuenta —'?'':$('#r-account').value;const cat=$('#r-category').value==='—'?'':$('#r-category').value;const sub=$('#r-sub').value==='—'?'':$('#r-sub').value;
