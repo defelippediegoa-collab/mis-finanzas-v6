@@ -14,7 +14,8 @@ function loanPaidCuotas(l){const ks=new Set();DB.tx.forEach(t=>{if(t.loanId===l.
 function loanStatus(l){const a=acct(l.account);const bal=a?(a.initial||0)+effects(l.account):0;const paid=loanPaidCuotas(l);const sch=loanSchedule(l);
   const interestPaid=DB.tx.filter(t=>t.loanId===l.id&&t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const next=sch.find(s=>!paid.has(s.k))||null;
-  return{remaining:Math.max(0,-bal),paid:paid.size,n:sch.length,next,interestPaid,sch,paidSet:paid,done:paid.size>=sch.length};}
+  const remaining=Math.max(0,-bal);const done=paid.size>=sch.length||!!l.settled||remaining<0.01;
+  return{remaining,paid:paid.size,n:sch.length,next:done?null:next,interestPaid,sch,paidSet:paid,done};}
 // Flujos de préstamos de un mes (ARS): recibido, capital devuelto, interés pagado
 function loanFlowsARS(m){let recv=0,repaid=0,interest=0;DB.tx.forEach(t=>{if(t.pending||t.hist||ymOf(t.date)!==m)return;
   if(t.type==='transfer'){if(isLoanAcct(t.from)&&!isLoanAcct(t.to))recv+=toARS(t.amountTo!=null?t.amountTo:t.amount,curOf(t.to))||0;else if(isLoanAcct(t.to)&&!isLoanAcct(t.from))repaid+=toARS(t.amount,curOf(t.from))||0;}
@@ -61,12 +62,15 @@ function openLoanDetail(id){const l=loanById(id);if(!l)return;const st=loanStatu
   let h='<div class="debtlist"><div class="finhead" style="border-top:none;padding-top:8px">Recibiste '+money(l.received,c)+' el '+l.date+' en '+esc(l.inAccount)+' · devolvés '+money(l.totalToRepay,c)+' en '+l.n+' cuota'+(l.n>1?'s':'')+' · interés '+money(l.interestTotal,c)+'</div>';
   h+='<div class="debttot" style="padding:10px 16px"><span>Capital que falta devolver</span><span class="'+(st.remaining>0?'neg':'pos')+'">'+money(st.remaining,c)+'</span></div>';
   h+='<div class="finrow"><span>Cuotas pagadas</span><span>'+st.paid+' / '+st.n+'</span></div><div class="finrow"><span>Interés pagado</span><span>'+money(st.interestPaid,c)+'</span></div>';
+  if(l.settled){const s=l.settled;h+='<div class="finrow" style="flex-direction:column;align-items:flex-start;gap:2px"><span>✅ Cancelado anticipadamente el '+s.date+'</span><small style="color:var(--muted)">Pagaste '+money(s.paid,c)+' por un capital de '+money(s.capital,c)+(s.diff>0.005?' · <b class="pos">quita de '+money(s.diff,c)+'</b>':(s.diff<-0.005?' · <b class="neg">recargo de '+money(-s.diff,c)+'</b> (registrado como interés)':' · sin quita ni recargo'))+'</small></div>';}
+  else if(st.remaining>0.01)h+='<div style="padding:4px 16px 0"><button class="editbtn" id="loanSettle" style="margin:0;width:100%">⚡ Cancelar anticipadamente (pagar todo ahora)</button></div>';
   if(st.next)h+='<div style="padding:10px 16px"><button class="save" id="loanPay" style="margin:0;width:100%">Registrar cuota '+(st.next.k+1)+' · '+money(st.next.cuota,c)+' ('+st.next.month+')</button><div class="hint" style="margin-top:6px">Crea la transferencia de capital '+money(st.next.capital,c)+' desde '+esc(l.payFrom)+' y el gasto de interés '+money(st.next.interest,c)+'.</div></div>';
   h+='<div class="finhead">Cronograma</div>';
   st.sch.forEach(s=>{const paid=st.paidSet.has(s.k);h+='<div class="finrow"><span>'+(paid?'✓ ':'')+(s.k+1)+' · '+s.month+'<small style="color:var(--muted2)"> capital '+money(s.capital,c)+' + interés '+money(s.interest,c)+'</small></span><span class="'+(paid?'pos':'')+'" style="'+(paid?'':'color:var(--muted)')+'">'+money(s.cuota,c)+'</span></div>';});
   h+='<div style="padding:12px 16px;display:flex;gap:8px"><button class="editbtn" id="loanEdit" style="margin:0;flex:1">Editar</button><button class="editbtn" id="loanDel" style="margin:0;flex:1;color:var(--expense)">Eliminar</button></div></div>';
   $('#cardDetTitle').textContent='🏦 '+l.name;$('#cardDetBody').innerHTML=h;$('#cardDetScrim').classList.add('on');
   const pb=$('#loanPay');if(pb)pb.onclick=()=>{registerLoanCuota(l,st.next);openLoanDetail(id);};
+  const sb=$('#loanSettle');if(sb)sb.onclick=()=>openLoanSettle(l);
   $('#loanEdit').onclick=async()=>{const name=await askText('Nombre del préstamo',l.name);if(name===null)return;const lender=await askText('Quién presta',l.lender||'');if(lender===null)return;const payFrom=await askText('Cuenta desde la que pagás (nombre exacto)',l.payFrom);if(payFrom===null)return;
     if(!acct(payFrom.trim())){toast('No existe la cuenta "'+payFrom+'"');return;}l.name=name.trim()||l.name;l.lender=lender.trim();l.payFrom=payFrom.trim();const r=DB.reminders.find(x=>x.id===l.reminderId);if(r){r.name='Cuota préstamo '+l.name;r.account=l.payFrom;}persist();openLoanDetail(id);render();};
   $('#loanDel').onclick=()=>{const movs=DB.tx.filter(t=>t.loanId===l.id||t.from===l.account||t.to===l.account||t.account===l.account);
@@ -78,3 +82,35 @@ function registerLoanCuota(l,s){if(!s)return;const date=localDate();const c=l.cu
   DB.tx.push({id:'u'+ts+'_c'+s.k,date,type:'transfer',from:l.payFrom,to:l.account,amount:s.capital,currency:curOf(l.payFrom),note:'Cuota '+(s.k+1)+'/'+l.n+' préstamo '+l.name+' (capital)',loanId:l.id,loanCuota:s.k,source:'app',createdAt:ts});
   if(s.interest>0)DB.tx.push({id:'u'+ts+'_i'+s.k,date,type:'expense',account:l.payFrom,category:ic.category,sub:ic.sub,amount:s.interest,currency:curOf(l.payFrom),note:'Cuota '+(s.k+1)+'/'+l.n+' préstamo '+l.name+' (interés)',loanId:l.id,loanCuota:s.k,source:'app',createdAt:ts});
   DB.paid['rem:'+l.reminderId+':'+s.month]=1;persist();render();toast('Cuota '+(s.k+1)+' registrada');}
+
+// ---- cancelación anticipada: se paga el capital que falta de una vez, con quita (pagás menos) o recargo (pagás más) ----
+let _settleLoan=null;
+function openLoanSettle(l){loanSettleBind();_settleLoan=l;const st=loanStatus(l);const c=l.currency;
+  $('#ls-remaining').textContent=money(st.remaining,c);$('#ls-paid').value=Math.round(st.remaining*100)/100;fillAccounts($('#ls-from'),l.payFrom);$('#ls-date').value=localDate();
+  loanSettleHint();$('#cardDetScrim').classList.remove('on');$('#loanSettleScrim').classList.add('on');}
+function loanSettleHint(){const l=_settleLoan;if(!l)return;const st=loanStatus(l);const c=l.currency;const paid=parseFloat($('#ls-paid').value)||0;const diff=Math.round((st.remaining-paid)*100)/100;const el=$('#loanSettleHint');
+  if(!(paid>0)){el.textContent='';return;}
+  if(diff>0.005)el.innerHTML='Quita de <b class="pos">'+money(diff,c)+'</b>: pagás menos que el capital que falta. La deuda queda en cero y la quita no cuenta como ingreso.';
+  else if(diff<-0.005)el.innerHTML='Recargo de <b class="neg">'+money(-diff,c)+'</b>: pagás más que el capital que falta. Se registra como gasto de intereses.';
+  else el.textContent='Pagás exactamente el capital que falta.';}
+let _lsBound=false;function loanSettleBind(){if(_lsBound)return;_lsBound=true;
+$('#ls-paid').oninput=loanSettleHint;
+$('#closeLS').onclick=()=>{$('#loanSettleScrim').classList.remove('on');if(_settleLoan)openLoanDetail(_settleLoan.id);};
+$('#loanSettleScrim').onclick=e=>{if(e.target===$('#loanSettleScrim'))$('#closeLS').onclick();};
+$('#lsOk').onclick=()=>{const l=_settleLoan;if(!l)return;const st=loanStatus(l);const c=l.currency;
+  const paid=Math.round((parseFloat($('#ls-paid').value)||0)*100)/100;if(!(paid>0)){toast('Poné lo que pagás');return;}
+  const from=$('#ls-from').value;const date=$('#ls-date').value||localDate();const capital=Math.round(st.remaining*100)/100;const diff=Math.round((capital-paid)*100)/100;
+  if(!confirm('Vas a cancelar "'+l.name+'" pagando '+money(paid,c)+' desde '+from+'.'+(diff>0.005?' Quita: '+money(diff,c)+'.':(diff<-0.005?' Recargo: '+money(-diff,c)+' (interés).':''))+' Las cuotas futuras se eliminan del recordatorio.\n\n¿Confirmar?'))return;
+  const ts=Date.now();
+  // capital: transferencia por lo que realmente pagás de capital (todo lo que falta, o menos si hay quita)
+  const capPaid=Math.min(paid,capital);
+  DB.tx.push({id:'u'+ts+'_s',date,type:'transfer',from,to:l.account,amount:capPaid,currency:curOf(from),note:'Cancelación anticipada préstamo '+l.name+' (capital)',loanId:l.id,source:'app',createdAt:ts});
+  // recargo: gasto de interés
+  if(diff<-0.005){const ic=interestCategory();DB.tx.push({id:'u'+ts+'_r',date,type:'expense',account:from,category:ic.category,sub:ic.sub,amount:-diff,currency:curOf(from),note:'Recargo por cancelación anticipada préstamo '+l.name,loanId:l.id,source:'app',createdAt:ts});}
+  // quita: la deuda que no se paga se cierra ajustando el saldo inicial de la cuenta Préstamo (no es ingreso)
+  if(diff>0.005){const a=acct(l.account);if(a)a.initial=Math.round(((a.initial||0)+diff)*100)/100;}
+  l.settled={date,paid,capital,diff,account:from};
+  // recordatorio: cortar en la última cuota pagada (o desactivarlo si no se pagó ninguna)
+  const r=DB.reminders.find(x=>x.id===l.reminderId);if(r){const paidMonths=st.sch.filter(s=>st.paidSet.has(s.k)).map(s=>s.month).sort();r.until=paidMonths.length?paidMonths[paidMonths.length-1]:shiftMonthStr(l.firstMonth+'-01',-1).slice(0,7);}
+  persist();$('#loanSettleScrim').classList.remove('on');render();toast('Préstamo cancelado · '+(diff>0.005?'quita '+money(diff,c):(diff<-0.005?'recargo '+money(-diff,c):'sin diferencia')));openLoanDetail(l.id);};
+}

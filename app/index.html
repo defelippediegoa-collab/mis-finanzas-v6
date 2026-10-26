@@ -251,6 +251,18 @@
 </div></div>
 
 <!-- LOAN SHEET -->
+<!-- LOAN SETTLE -->
+<div class="scrim" id="loanSettleScrim" style="z-index:26"><div class="sheet">
+  <h3><span>⚡ Cancelar préstamo</span><button class="x" id="closeLS">×</button></h3>
+  <div class="ratebox"><div class="rl">Capital que falta devolver</div><div class="rv" id="ls-remaining">0</div></div>
+  <div class="fld"><label>Lo que pagás hoy para cancelarlo</label><input type="number" class="big" id="ls-paid" inputmode="decimal" placeholder="0"></div>
+  <div class="hint" id="loanSettleHint" style="padding:0 18px"></div>
+  <div class="row2" style="padding:6px 18px"><div><label style="font-size:12px;color:var(--muted)">Desde la cuenta</label><select id="ls-from"></select></div><div><label style="font-size:12px;color:var(--muted)">Fecha</label><input type="date" id="ls-date"></div></div>
+  <div class="hint" style="padding:0 18px;color:var(--muted)">Si pagás menos que el capital, la diferencia es una quita: la deuda se cierra igual y no cuenta como ingreso. Si pagás más, el excedente se registra como interés.</div>
+  <button class="save" id="lsOk">Cancelar el préstamo</button>
+  <div style="height:10px"></div>
+</div></div>
+
 <div class="scrim" id="loanScrim"><div class="sheet">
   <h3><span>🏦 Nuevo préstamo</span><button class="x" id="closeLoan">×</button></h3>
   <div class="hint" style="padding:10px 18px 0;color:var(--muted)">La plata entra a tu cuenta pero no es un ingreso: queda como deuda en una cuenta "Préstamo" y se arma el recordatorio de las cuotas.</div>
